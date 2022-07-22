@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="./static/css/main.css"/>
+		<script src="./static/js/vue@v2.6.js"></script>
+	</head>
+	<style type="text/css">
+		a { font-size: 20px; }
+	</style>
+
+	<body>
+		<div id="app">
+			<div class="diff">
+				<div class="average-box">
+					<h2 style="color: white;width: 288px;">1. Stock Primary Compute</h2>
+					<ol>
+						<li><a href="./stock/stock.html" target="_blank">基础股价计算器</a></li>
+						<li><a href="./stock/stock-diff/stockDiff.html" target="_blank">基础股价 - 高抛低吸数据研测</a></li>
+						
+						<li><a href="./excel 个股入选计算/index.html" target="_blank">Excel 个股入选计算</a></li>
+					</ol>
+				</div>
+			</div>
+			
+			<div class="diff">
+				<h2>2. 可转债：</h2>
+				<div class="average-box">
+					<ol>
+						<li><a href="./bond/bond.html" target="_blank">可转债基础价格计算器</a></li>
+						<li><a href="./bond/bond-diff/bondDiff.html" target="_blank">可转债 - 高抛低吸数据研测</a></li>
+					</ol>
+				</div>
+			</div>
+			
+			<div class="diff">
+				<h2>3. 其他：</h2>
+				<div class="average-box">
+					<ol>
+						<li><a href="./其他计算/复利统计计算.html" target="_blank">复利计算器</a></li>
+					</ol>
+				</div>
+			</div>
+		</div>
+	</body>
+	
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			data() {
+				return {
+				}
+			},
+		})
+	</script>
+</html>

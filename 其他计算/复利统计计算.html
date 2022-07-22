@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>复利统计计算</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	<style type="text/css">
+		#app { margin-left: 28px; }
+		.details ol li {padding: 8px 0;border-bottom: 1px #888 solid;}
+		.details ol li span { display: inline-block;margin-right: 22px; }
+		.footer-count {text-align: left;display: inline-block;padding: 3px 12px;border-radius: 100px;background: white;color: rgb(255, 69, 0);}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<div class="diff">
+				<h2 style="color: white;">全局数值设定：</h2>
+				<span>初始金：</span>
+				<input type="number" v-model="form.initMoney" @input="compoundInterestCompute" placeholder="请输入初始金" />
+				
+				<span>&emsp;复利率：</span>
+				<input type="number" v-model="form.compoundInterestRate" @input="compoundInterestCompute" style="width: 80px;" /> %
+				
+				<span>&emsp;复利天数：</span>
+				<input type="number" v-model="form.compoundInterestRateDay" @input="compoundInterestCompute" style="width: 80px;" />
+			</div>
+			
+			<div class="diff">
+				<h2 style="color: white;">负利率周期：</h2>
+				<span>指定周期负利率：</span>
+				-<input type="number" v-model="form.minusInterestRate" @input="compoundInterestCompute" style="width: 80px;" /> %
+				
+				<span>&emsp;负利率周期（天）：</span>
+				<input type="number" v-model="form.minusCycleDay" @input="compoundInterestCompute" style="width: 80px;" />
+			</div>
+			
+			<div class="diff details">
+				<h2>Compute Result ：</h2>
+				<div class="footer-count">
+					<font color="#333">总&emsp;计：</font>
+					<font>{{ window.accounting.formatMoney(moneyCount, { symbol: '¥' }) }}</font>
+				</div>
+				<ol>
+					<li :class="{'green-color': item.compoundInterestRate <= 0 }" v-for="(item, index) of detailList" :key="index">
+						<span>当前总金额：{{ window.accounting.formatMoney(item.amount, { symbol: '¥' }) }}</span>
+						<span>复利率：{{ item.compoundInterestRate }}</span>
+						<span>交易手续费率：-</span>
+						<span>当前结算：{{ window.accounting.formatMoney(item.moneyCount, { symbol: '¥' }) }}</span>
+					</li>
+				</ol>
+			</div>
+		</div>
+	</body>
+	
+	<script src="./accounting.min.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../stock/stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[$commonMinxin],
+			data() {
+				return {
+					detailList:[],
+					moneyCount: 0,
+					
+					
+					form: {
+						initMoney: 10000, // 初始金
+						compoundInterestRate: 1.5, // 复利率
+						compoundInterestRateDay: 3, // 复利天数
+						serviceChargeRate: 0.25, // 交易手续费率
+						
+						minusInterestRate: 1.5, // 指定周期负利率
+						minusCycleDay: 5, // 指定周期（天）负利率
+					}
+				}
+			},
+			created:function() {
+				this.compoundInterestCompute();
+			},
+			methods:{
+				compoundInterestCompute:function() {
+					var _this = this;
+					var form = this.form;
+					var pollingCount = 0;
+					var list = [];
+					
+					var compounds = function(amount) {
+						pollingCount++;
+						if(pollingCount <= form['compoundInterestRateDay']) {
+							console.log('pollingCount => ' + pollingCount);
+							
+							
+							// 自定义条件计算
+							if(pollingCount % form['minusCycleDay'] === 0) {
+								_this.moneyCount = amount + (amount * -form['minusInterestRate'] / 100);
+							}else {
+								_this.moneyCount = amount + (amount * form['compoundInterestRate'] / 100);
+							}
+							
+							
+							var data = {
+								amount: amount,
+								compoundInterestRate: pollingCount % form['minusCycleDay'] === 0 ? -(form['minusInterestRate']) : form['compoundInterestRate'],
+								serviceChargeRate: form['serviceChargeRate'],
+								moneyCount: _this.moneyCount,
+							}
+							list.push(data);
+							compounds(_this.moneyCount);
+						}else {
+							_this.detailList = JSON.parse(JSON.stringify(list));
+							// console.log(JSON.stringify(_this.detailList))
+							// console.log('Finish To $money => ' + _this.moneyCount)
+						}
+					}
+					compounds(Number(form['initMoney']));
+				}
+			}
+		})
+	</script>
+</html>

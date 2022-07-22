@@ -1,0 +1,304 @@
+<!doctype html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<title>Excel 个股入选计算</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style type="text/css">
+	#app {margin-left: 28px;}
+	.average-box ol li { padding: 6px 0;border-bottom: 1px #888 solid; }
+	.average-box ol li span { display: inline-block;margin-left: 16px; }
+	#app .diff span, li, .text { font-size: 16px; }
+	.result {margin-top: 12px;padding: 4px 10px;border-radius: 50px;display: table;background-color: white;color: #FF4500;}
+	.result span { width: 190px;}
+	.green-color { color: #00FF60; font-weight: bold; }
+	</style>
+
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<div class="console">
+				<h3>表格必要以及非必要字段</h3>
+				<ol>
+					<li>首列为股票名称，不要添加序号</li>
+					<li>代码</li>
+					<li>成交价</li>
+					<li>入选时间</li>
+				</ol>
+			</div>
+			
+			<div class="diff">
+				<div class="box">
+					<form style="display: inline-block;padding: 7px;border: 1px #888 solid;">
+						<label>
+							请选择需要导入的 Excel 个股数据：
+							<input type="file" id="excel_file" ref="excel_file" accept=".xls" multiple @change="handleFiles(event.target)" style="width: initial;"/>
+						</label>
+						<span class="clear-text-button" @click="resetInput">重置</span>
+					</form>
+					
+					<span>放大交易天数：</span>
+					<input type="number" v-model="form.day" placeholder="请输入向前查询的天数" @keyup="onKeyUps" />
+					<button type="button" @click="stockHistoryAction" style="margin-left: 10px;">确认</button>
+				</div>
+				
+				<div class="data-diff average-box" style="margin: 0px;" v-for="(list, index) of pageList">
+					<h2 style="color: white;width: 380px;">入选池：<span style="font-size: inherit !important;color: #FF4500;">{{ list[0].filename }}</span></h2>
+					
+					<ol>
+						<li v-for="stock of list">
+							<span style="color: rgb(255,167,0);">名称：{{ stock['名称'] }}（{{ stock['代码'] }}）</span>
+							<span>成交价：{{ stock['成交'] }}</span>
+							<span>入选时间：{{ stock['入选时间'] }} - {{ stock.afterList ? stock.afterList[0].date : '' }}</span>
+							<span>涨跌幅：{{ stock['涨跌幅'] }}</span>
+							<span>换手率：{{ stock['换手率'] }}</span>
+							
+							<div class="result">
+								<span :class="{ 'green-color': afterNewHigh(list, stock['代码'], 'nextDayUp') <= 0 }">
+									<font color="#222">次日内最高价：</font>
+									<font>{{ afterNewHigh(list, stock['代码'], 'nextDay') }}</font>
+								</span>
+								
+								<span :class="{ 'green-color': afterNewHigh(list, stock['代码'], 'nextDayUp') <= 0 }">
+									<font color="#222">次日上升区间：</font>
+									<font>{{ afterNewHigh(list, stock['代码'], 'nextDayUp') }}%</font>
+								</span>
+								
+								<span :class="{ 'green-color': afterNewHigh(list, stock['代码'], 'ManyDayUp') <= 0 }">
+									<font color="#222">持有{{ stock.afterList ? stock.afterList.length : ''}}日最高股价：</font>
+									<font>{{ afterNewHigh(list, stock['代码'], 'ManyDay') }}</font>
+								</span>
+								
+								<span :class="{ 'green-color': afterNewHigh(list, stock['代码'], 'ManyDayUp') <= 0 }" style="width: 240px;">
+									<font color="#222">持有{{ stock.afterList ? stock.afterList.length : ''}}日最高上升区间：</font>
+									<font>{{ afterNewHigh(list, stock['代码'], 'ManyDayUp') }}%</font>
+								</span>
+							</div>
+						</li>
+					</ol>
+				</div>
+			</div>
+		</div>
+	</body>
+	
+	<script type="text/javascript" src="./xlsx.full.min.js"></script>
+	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../stock/stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+	var app = new Vue({
+		el: '#app',
+		mixins:[$commonMinxin],
+		data() {
+			return {
+				stockList:[],
+				pageList:[],
+				
+				fileEachCount: 0,
+				form: {
+					day: 1,
+				}
+			}
+		},
+		computed:{
+		},
+		methods:{
+			// 重置
+			resetInput:function() {
+				
+				this.fileEachCount = 0;
+				this.stockList.splice(0, this.stockList.length);
+				this.pageList.splice(0, this.pageList.length);
+				// document.getElementById("excel_file").value = null;
+			},
+			/**
+			 * 按键监听
+			 */
+			onKeyUps:function(event) {
+				if(event.keyCode == 13 && !this.stock.isRequest) {
+					this.stockHistoryAction()
+				}
+			},
+			/**
+			 * 计算空间
+			 * @param { Array } list
+			 * @param { String } code
+			 * @param { String } type
+			 */
+			afterNewHigh:function(list, code, type) {
+				for(var item of list) {
+					if(!item.afterList) { return }
+					
+					if(item['代码'] == code) {
+						// 次日最高价
+						if(type == 'nextDay') {
+							return item.afterList[item.afterList.length - 1].max_price;
+						}
+						
+						// 次日上升区间
+						if(type == 'nextDayUp') {
+							return ((item.afterList[item.afterList.length - 1].max_price - item['成交']) / item['成交'] * 100).toFixed(2);
+						}
+						
+						// 持有多日内最高价
+						if(type == 'ManyDay') {
+							// var ManyMaxPrice = 0;
+							// item.afterList.forEach(function(data) {
+							// 	data.max_price > ManyMaxPrice ? (ManyMaxPrice = data.max_price) : '';
+							// })
+							// return ManyMaxPrice;
+							return item.afterList[0].max_price;
+						}
+						
+						// 持有多日内上升区间
+						if(type == 'ManyDayUp') {
+							// var ManyMaxPrice_1 = 0;
+							// item.afterList.forEach(function(data) {
+							// 	data.max_price > ManyMaxPrice_1 ? (ManyMaxPrice_1 = data.max_price) : '';
+							// })
+							
+							return ((item.afterList[0].max_price - item['成交']) / item['成交'] * 100).toFixed(2);
+						}
+					}
+				}
+			},
+			/**
+			 * 查询个股历史日线数据
+			 * @param {Object} code 个股编码
+			 */
+			stockHistoryAction:function() {
+				var _this = this;
+				var baseFetchCount = 0;
+				var childFetchCount = 0;
+				
+				var fetch = function() {
+					let _baseStockList = _this.stockList[baseFetchCount];
+					if(_baseStockList && _baseStockList.length > 0)  {
+						console.log('baseFetchCount => ' + baseFetchCount);
+						
+						let fetchStockInfo = function() {
+							let stock = _baseStockList[childFetchCount];
+							if(stock) {
+								console.log('childFetchCount => ' + childFetchCount);
+								
+								let beginTime = stock['入选时间'].split('/');
+								beginTime[0] = '20' + beginTime[0].toString();
+								
+								beginTime = moment(beginTime.join('-')).add(1, 'days').format('YYYY-MM-DD');
+								let endTime = moment(beginTime).add(_this.form.day - 1, 'days').format('YYYY-MM-DD');
+								
+								let params = {
+									code: stock['代码'],
+									beginTime: beginTime,
+									endTime: endTime
+								}
+								
+								_this.fetchStockHistory(params.code, params.beginTime, params.endTime, function(list) {
+									stock.afterList = list;
+									_this.pageList = JSON.parse(JSON.stringify(_this.stockList));
+									
+									setTimeout(function() {
+										childFetchCount++;
+										fetchStockInfo();
+									},220)
+								})
+							}else {
+								baseFetchCount++;
+								childFetchCount = 0;
+								fetch();
+							}
+						}
+						
+						fetchStockInfo();
+					}else {
+						console.log('Not Stock List Size')
+					}
+				};
+				
+				fetch();
+			},
+			// 读取文件
+			handleFiles:function(input) {
+				var _this = this;
+				var files = (input || document.getElementById("excel_file") ).files;
+				if(input) { _this.resetInput() }
+				
+				// 添加重复文件拦截
+				var sameFile = [];
+				for(const _f of files) {
+					for(const _pl of this.pageList) {
+						if(_f.name == _pl[0].filename) {
+							sameFile.push(_f.name)
+						}
+					}
+				}
+				if(input && sameFile.length > 0) {
+					alert(JSON.stringify(sameFile) + ' 文件已加载！')
+					return;
+				}
+				
+				var eachReadyFile = function(file, callback) {
+					let reader = new FileReader();
+					reader.onload = function(e) {
+						var workbook = XLSX.read(e.target.result, {type: 'binary'});
+						// console.log(workbook)
+						
+						var _sheetNames = workbook.SheetNames
+						var _sheets = workbook.Sheets[_sheetNames]
+						// console.log(_sheets)
+						
+						// 处理为 Array
+						var index = 'ABCDEFG'.split('');
+						var stockArray = [];
+						for(var key in _sheets) {
+							var iKey = key.substr(0,1)
+							var iValue = key.substr(1, key.toString().length)
+							
+							if(iKey == 'A') {
+								var stockObject = new Object();
+								index.forEach(function(data) {
+									if(typeof _sheets[data + iValue] == 'object' && iValue != '1') {
+										var skey = data == 'A' ? '名称' : _sheets[data + '1'].v;
+										var sval = _sheets[data + iValue].v;
+										stockObject[skey] = sval;
+									}
+								})
+								JSON.stringify(stockObject) != '{}' ? stockArray.push(stockObject) : '';
+							}
+						}
+						
+						stockArray[0].filename = file.name;
+						_this.stockList.push(stockArray)
+						_this.pageList.push(stockArray);
+						callback();
+					};
+					reader.readAsBinaryString(file);
+				}
+				
+				// Each Files Load
+				if(files.length > 0) {
+					let file = files[_this.fileEachCount];
+					if(file) {
+						eachReadyFile(file, function() {
+							if(files.length > _this.pageList.length) {
+								_this.fileEachCount = _this.fileEachCount + 1;
+								_this.handleFiles();
+							}else {
+								console.log(JSON.stringify(_this.pageList));
+								_this.stockHistoryAction();
+							}
+						});
+					}
+				}
+			}
+		}
+	})
+	</script>
+
+</html>

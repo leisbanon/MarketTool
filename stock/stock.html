@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>股票 Base</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 查询 -->
+			<div class="diff">
+				<h2 style="color: white;width: 288px;">查询：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
+				
+				<div class="box">
+					<span>* 股票代码：</span>
+					<input type="text" v-model="uad.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" @change="reset" />
+					
+					<span>&emsp;* 日期：</span>
+					<input type="date" v-model="uad.date" placeholder="请输入查询日期" @change="onDateChange"/>
+					
+					<button type="button" @click="getStockInfo" style="margin-left: 18px;">查询</button>
+				</div>
+				
+				<div class="data-diff average-box" style="margin: 0px;">
+					<ol>
+						<li>日&emsp;期：{{ resForm.date }}</li>
+						<li>
+							<span>开盘价：{{ resForm.open_price }} REM，</span>
+							<span>收盘价：{{ resForm.close_price }} REM</span>
+						</li>
+						<li>
+							<span>最低价：{{ resForm.min_price }} REM，</span>
+							<span>最高价：{{ resForm.max_price }} REM</span>
+						</li>
+					</ol>
+				</div>
+			</div>
+			
+			<!-- 全局值 -->
+			<div class="diff">
+				<h2 style="color: white;">全局值设定：</h2>
+				
+				<span>成本价：</span>
+				<input type="number" v-model="uad.openingPrice" placeholder="请输入价格" />
+				
+				<span>&emsp;市场价：</span>
+				<input type="number" v-model="uad.closingPrice" placeholder="请输入价格" />
+				
+				<span>&emsp;涨跌比：</span>
+				<input type="number" v-model="uad.rangeRatio" placeholder="请输入价格" />
+			</div>
+			
+			<!-- 止损位计算 -->
+			<div class="diff" id="97">
+				<h2 style="width: 448px;">1. 止损位计算（止损位 | 止盈位）：</h2>
+				<span>成本价：</span>
+				<input type="number" v-model="uad.openingPrice" placeholder="请输入价格" />
+				
+				<span>&emsp;止损位（盈）：</span>
+				<input type="number" v-model="uad.rangeRatio" placeholder="请输入涨跌位百分比" />
+				<span>-</span>
+				<button type="button" @click="onChangeFall">{{ uad.buttontext }}</button>
+				
+				<span>&emsp;结果值：{{ lossCompute }}</span>
+			</div>
+			
+			<!-- 涨跌幅计算 -->
+			<div class="diff" id="98">
+				<h2>2. 涨跌幅计算：</h2>
+				<span>成本价：</span>
+				<input type="number" v-model="uad.openingPrice" placeholder="请输入成本价" />
+				
+				<span>&emsp;市场价：</span>
+				<input type="number" v-model="uad.closingPrice" placeholder="请输入市场价" />
+				
+				<span>&emsp;涨跌幅：{{ floatCompute }}%</span>
+			</div>
+			
+			<!-- 盈亏额计算 -->
+			<div class="diff" id="99">
+				<h2>3. 盈亏额计算：</h2>
+				<span>成本价：</span>
+				<input type="number" v-model="uad.openingPrice" placeholder="请输入成本价" />
+				
+				<span>&emsp;市场价：</span>
+				<input type="number" v-model="uad.closingPrice" placeholder="请输入卖出价" />
+				
+				<span>&emsp;成交量：</span>
+				<input type="number" v-model="uad.vol" placeholder="请输入成交数量" />
+				
+				<span>&emsp;原始成交额：{{ (uad.openingPrice * uad.vol).toFixed(2) }} REM</span>
+				
+				<span>&emsp;收益值：{{ profitCompute }} REM</span>
+			</div>
+			
+			<!-- 平均值计算 -->
+			<div class="diff" id="100">
+				<h2>4. 平均值计算：</h2>
+				<span>开始值：</span>
+				<input type="number" v-model="uad.openingPrice" placeholder="请输入成本价" />
+				
+				<span>&emsp;结束值：</span>
+				<input type="number" v-model="uad.closingPrice" placeholder="请输入卖出价" />
+				
+				<span>&emsp;平均值：{{ ((Number (uad.openingPrice)+ Number(uad.closingPrice)) / 2).toFixed(2) }} REM</span>
+			</div>
+			
+			<!-- 差值计算 -->
+			<div class="diff" id="101">
+				<h2>5. 差值计算：</h2>
+				<span>开始值：</span>
+				<input type="number" v-model="uad.openingPrice" placeholder="请输入成本价" />
+				
+				<span>&emsp;结束值：</span>
+				<input type="number" v-model="uad.closingPrice" placeholder="请输入卖出价" />
+				
+				<span>&emsp;上下差值：{{ (Number(uad.closingPrice) - Number(uad.openingPrice)).toFixed(2) }} REM</span>
+			</div>
+			
+			<!-- 低吸高抛 -->
+			<div class="diff" id="102">
+				<h2 style="width: 322px;">6. 高抛低吸测算：<a href="./stock-diff/StockDiff.html" target="_blank"> — Go</a></h2>
+				<span>成本价：</span>
+				<input type="number" v-model="uad.openingPrice" placeholder="请输入成本价" />
+				
+				<span>&emsp;最低价：</span>
+				<input type="number" v-model="uad.minPrice" placeholder="请输入最低价" />
+				
+				<span>&emsp;最高价：</span>
+				<input type="number" v-model="uad.maxPrice" placeholder="请输入最高价" />
+				
+				<ul>
+					<li title="下跌区间：“成本价” 与 “最低价” 的比较"><span>下跌区间：</span>{{ highOfLowCompute('1') }}</li>
+					<li title="上升区间：“成本价” 与 “最高价” 的比较"><span>上升区间：</span>{{ highOfLowCompute('2') }}</li>
+					<li title="当日区间：“最低价” 与 “最高价” 的比较"><span>当日区间：</span>{{ highOfLowCompute('3') }}</li>
+				</ul>
+			</div>
+		</div>
+	</body>
+	
+	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[$commonMinxin],
+			data() {
+				return {
+					uad:{
+						buttontext:'涨', // 涨跌
+						code:'', // 股票代码
+						date:window.moment().format('YYYY-MM-DD'), // 日期
+						
+						openingPrice:0, // 开盘价，成本价
+						closingPrice:0, // 收盘价，市场价
+						vol: '', // 成交量
+						rangeRatio:-5.33, // 涨跌比率
+						
+						minPrice:0, // 最低价
+						maxPrice:0, // 最高价
+					},
+					
+					resForm: { // 请求结果数据
+						date:'', 
+					}, 
+				}
+			},
+			computed:{
+				/**
+				 * 收益额计算
+				 */
+				profitCompute:function() {
+					var _openingPrice = this.uad.openingPrice;
+					var _closingPrice = this.uad.closingPrice;
+					var _vol = this.uad.vol;
+					
+					if(!_openingPrice || !_closingPrice || !_vol) { return };
+					
+					var buyPrice = _openingPrice * _vol;
+					var putPrice = _closingPrice * _vol;
+					return (putPrice - buyPrice).toFixed(2);
+				},
+				/**
+				 * 止损位计算
+				 */
+				lossCompute:function() {
+					var price = Number(this.uad.openingPrice);
+					var ratio = Number(this.uad.rangeRatio);
+					var result = price + (price * ratio / 100);
+					return result.toFixed(2);
+				},
+				/**
+				 * 涨跌幅计算
+				 */
+				floatCompute:function() {
+					var result = (this.uad.closingPrice - this.uad.openingPrice) / this.uad.openingPrice * 100;
+					return (result || 0).toFixed(2);
+				}
+			},
+			methods:{
+				/**
+				 * 日期发生变化
+				 */
+				onDateChange() {
+					this.reset();
+					this.getStockInfo();
+				},
+				/**
+				 * 按键监听
+				 */
+				onKeyUps:function(event) {
+					if(event.keyCode == 13) {
+						this.getStockInfo()
+					}
+				},
+				/**
+				 * 查询个股基本信息
+				 */
+				getStockInfo:function() {
+					var _this = this;
+					if(this.stock.isRequest === true) { return }
+					
+					this.fetchStockInfo(this.uad.code,function(data) {
+						Object.assign(_this.stock,data)
+						_this.getStockHistory(data.code);
+						_this.stock.isRequest = true;
+					})
+				},
+				/**
+				 * 获取个股行情数据
+				 */
+				getStockHistory:function(code) {
+					var _this = this;
+					
+					var beginTime = moment(this.uad.date).subtract(1, 'days').format('YYYY-MM-DD');
+					var endTime = moment(this.uad.date).format('YYYY-MM-DD');
+					this.fetchStockHistory(code, beginTime, endTime, function(list) {
+						Object.assign(_this.resForm, list[0]);
+						_this.uad.openingPrice = list[0].close_price;
+					})
+				},
+				/**
+				 * 高抛低吸测算
+				 * @param {Object} index 指定索引
+				 */
+				highOfLowCompute:function(index) {
+					// 成本价与最低价的比较
+					if(index == '1') {
+						var wave = '震幅 ' + ((this.uad.minPrice - this.uad.openingPrice) / this.uad.openingPrice * 100 || 0).toFixed(2) + '%，';
+						var diff = ' 价差 ' + (this.uad.minPrice - this.uad.openingPrice).toFixed(2) + '元';
+						return wave + diff;
+					}
+					
+					// 成本价与最高价的比较
+					if(index == '2') {
+						var wave = '震幅 ' + ((this.uad.maxPrice - this.uad.openingPrice) / this.uad.openingPrice * 100 || 0).toFixed(2) + '%，';
+						var diff = ' 价差 ' + (this.uad.maxPrice - this.uad.openingPrice).toFixed(2) + '元';
+						return wave + diff;
+					}
+					
+					// 最低价与最高价的比较
+					if(index = '3') {
+						var wave = '震幅 ' + ((this.uad.maxPrice - this.uad.minPrice) / this.uad.minPrice * 100 || 0).toFixed(2) + '%，';
+						var diff = ' 价差 ' + (this.uad.maxPrice - this.uad.minPrice).toFixed(2) + '元';
+						return wave + diff;
+					}
+				},
+				onChangeFall() {
+					var buttontext = this.uad.buttontext;
+					if(buttontext == '涨') {
+						this.uad.buttontext = '跌';
+						this.uad.rangeRatio = Math.abs(this.uad.rangeRatio);
+						return;
+					}
+					
+					if(buttontext == '跌') {
+						this.uad.buttontext = '涨';
+						this.uad.rangeRatio = -Math.abs(this.uad.rangeRatio);
+						return;
+					}
+				}
+			}
+		})
+	</script>
+</html>

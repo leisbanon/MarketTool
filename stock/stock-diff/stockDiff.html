@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>股票 Diff</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../../static/css/main.css"/>
+		<script src="../../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style type="text/css">
+		#app { margin-left: 28px; }
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		<div id="app">
+			<div class="console">
+				<h3>Statised</h3>
+				<ul>
+					<li>总计日下行：平均震幅 {{ statisAverageCompute('downs', 'swing') }}%， 平均价差 {{ statisAverageCompute('downs', 'diff') }}元</li>
+					<li>总计日上行：平均震幅 {{ statisAverageCompute('ups', 'swing') }}%， 平均价差 {{ statisAverageCompute('ups', 'diff') }}元</li>
+					<li>总计日当日：平均震幅 {{ statisAverageCompute('current', 'swing') }}%， 平均价差 {{ statisAverageCompute('current', 'diff') }}元</li>
+				</ul>
+			</div>
+			
+			<!-- 全局值 -->
+			<div class="diff">
+				<h2 style="color: white;width: 410px;">全局值设定：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
+				<div class="box">
+					<span>* 股票代码：</span>
+					<input type="text" v-model="uad.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" @change="reset"/>
+					
+					<button type="button" @click="getStockInfo" style="margin-left: 18px;">查询并计算</button>
+				</div><br/>
+				
+				<div class="box">
+					<span>间隔交易日：</span>
+					<input type="number" v-model="uad.days" placeholder="指定间隔的天数" @input="onDayChange" @keyup="onKeyUps" />
+					
+					<span>&emsp;开始时间：</span>
+					<input type="date" v-model="uad.beginTime" placeholder="请输入开始时间" @change="uad.days = ''" />
+					
+					<span>&emsp;* 结束时间：</span>
+					<input type="date" v-model="uad.endTime" placeholder="请输入结束时间" />
+				</div>
+			</div>
+			
+			<!-- 低吸高抛 -->
+			<div class="diff" id="102">
+				<h2>高抛低吸数据研测：</h2>
+				
+				<div class="data-diff average-box" style="margin-bottom: 50px;color: rgba(255,167,0);display: flex;">
+					<ol>
+						<li>累计日下跌区间：平均震幅 {{ getSectionAverageCompute('onMinPrice', 'wave') }}%， 平均价差 {{ getSectionAverageCompute('onMinPrice', 'diff') }}元</li>
+						<li>累计日上升区间：平均震幅 {{ getSectionAverageCompute('onMaxPrice', 'wave') }}%， 平均价差 {{ getSectionAverageCompute('onMaxPrice', 'diff') }}元</li>
+						<li>累计日当日区间：平均震幅 {{ getSectionAverageCompute('onCurrPrice', 'wave') }}%， 平均价差 {{ getSectionAverageCompute('onCurrPrice', 'diff') }}元</li>
+					</ol>
+					
+					<div @click="addCompute" :class="['add-compute', statisCountMap.isButtonDisable ? 'button-disable' : '']">+</div>
+				</div>
+				
+				<div class="data-diff" v-for="(day,index) in dataRuleGroup">
+					
+					<div  class="data-column text">
+						<div style="float: left;">【{{ Math.abs(index - dataRuleGroup.length) }}】</div>
+						<div style="float: left;transform: scale(0.9);position: relative;bottom: 9px;text-align: center">
+							<div>{{ window.moment(day.date).format('MM-DD') }}</div>
+							<div>星期 {{ window.moment(day.date).format('E') }}</div>
+						</div>
+					</div>
+					
+					<span>&emsp;成本价：</span>
+					<input type="number" :value="day.costPrice" placeholder="请输入成本价" />
+					
+					<span>&emsp;次日最低价：</span>
+					<input type="number" :value="day.minPrice" placeholder="请输入最低价" />
+					
+					<span>&emsp;次日最高价：</span>
+					<input type="number" :value="day.maxPrice" placeholder="请输入最高价" />
+					
+					<ul style="bottom: -28px;white-space: nowrap;">
+						<li title="下跌区间：“成本价” 与 “最低价” 的比较"><span>下跌区间：</span>
+							{{ costOnMinPrice(day.costPrice, day.minPrice) }}
+						</li>
+						
+						<li title="上升区间：“成本价” 与 “最高价” 的比较"><span>上升区间：</span>
+							{{ costOnMaxPrice(day.costPrice, day.maxPrice) }}
+						</li>
+						
+						<li title="当日区间：“最低价” 与 “最高价” 的比较"><span>当日区间：</span>
+							{{ minOnMaxPrice(day.minPrice, day.maxPrice) }}
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</body>
+	
+	<script type="text/javascript" src="../../static/js/axios.min.js"></script>
+	<script type="text/javascript" src="../../static/js/moment.js"></script>
+	<script type="text/javascript" src="../stockCommon.minxin.js"></script>
+	<script type="text/javascript" src="./stockDiff.mixin.js"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[$commonMinxin, $stockDiffMinxin],
+			data() {
+				return {
+					uad:{
+						code:'', // 股票代码
+						name:'', // 股票名称
+						days:'5', // 指定查询的天数
+						beginTime:'', // 开始时间
+						endTime:'', // 结束时间
+					},
+					
+					dayLines:[], // 个股日线历史数据结果集
+					dataRuleGroup:[], // 数据队列规则组
+					
+					averageMap:{
+						onMinPrice: {
+							wave: 0,
+							diff: 0,
+						},
+						onMaxPrice: {
+							wave: 0,
+							diff: 0,
+						},
+						onCurrPrice: {
+							wave: 0,
+							diff: 0,
+						}
+					},
+					
+					statisCountMap:{
+						isButtonDisable: true,
+						downs:[],
+						ups:[],
+						current:[],
+					},
+				}
+			},
+			mounted:function() {
+				this.uad.endTime = moment().format('YYYY-MM-DD'); 
+			},
+			methods:{
+				/**
+				 * 指定查询天数变化时
+				 */
+				onDayChange(value) {
+					this.uad.beginTime = '';
+					this.reset()
+				},
+				/**
+				 * 按键监听
+				 */
+				onKeyUps:function(event) {
+					if(event.keyCode == 13 && !this.stock.isRequest) {
+						this.getStockInfo()
+					}
+				},
+				/**
+				 * 查询个股基本信息
+				 */
+				getStockInfo:function(callback) {
+					var _this = this;
+					
+					var stock = this.uad;
+					if(!stock.endTime || (!stock.days && !stock.beginTime)) {
+						alert('全局值设定参数不完整');
+						return;
+					}
+					
+					this.fetchStockInfo(this.uad.code,function(data) {
+						Object.assign(_this.stock,data)
+						_this.stock.isRequest = true;
+						
+						// 查询个股历史行情数据
+						_this.stockHistoryAction(data.code)
+					})
+				},
+				/**
+				 * 查询个股历史日线数据
+				 * @param {Object} code 个股编码
+				 */
+				stockHistoryAction:function(code) {
+					var _this = this;
+					var params = {
+						code: code,
+						beginTime: this.uad.beginTime,
+						endTime: this.uad.endTime
+					}
+					
+					if(this.uad.days) {
+						params.beginTime = moment(this.uad.endTime).subtract(this.uad.days * 3, 'days').format('YYYY-MM-DD');
+					}
+					
+					this.fetchStockHistory(params.code,params.beginTime, params.endTime, function(list) {
+						if(JSON.stringify(list) != JSON.stringify(_this.dayLines)) {
+							_this.dayLines = list;
+							_this.averageCompute();
+						}
+					})
+				},
+				/**
+				 * 初始化数据
+				 */
+				clearPageData:function() {
+					var _this = this;
+					_this.dataRuleGroup.splice(0,_this.dataRuleGroup.length);
+					
+					Object.keys(_this.averageMap).forEach(function(key) {
+						_this.averageMap[key].wave = 0;
+						_this.averageMap[key].diff = 0;
+					});
+				},
+				/**
+				 * 均值计算
+				 */
+				averageCompute:function() {
+					var dayLines = this.dayLines;
+					if(dayLines.length > 1) { 
+						this.uad.days > 0 ? dayLines = dayLines.slice(0, this.uad.days) : '';
+						this.statisCountMap.isButtonDisable = false;
+						this.clearPageData();
+					}else {
+						alert('查询返回数据结果：' + dayLines.length + '条')
+						return;
+					}
+					
+					for(var i = 0;i <= dayLines.length;i++) {
+						if(dayLines[i + 1]) {
+							var day = dayLines[i];
+							var costPrice = dayLines[i + 1].close_price; // 成本价
+							var date = dayLines[i + 1].date; // 日期
+							var minPrice = day.min_price; // 最低价
+							var maxPrice = day.max_price; // 最高价
+							
+							this.dataRuleGroup.push({
+								date: date,
+								costPrice: costPrice,
+								minPrice: minPrice,
+								maxPrice: maxPrice,
+							})
+							
+							
+							// 累计日下跌区间的平均值
+							var wave_min = (minPrice - costPrice) / costPrice * 100 || 0;
+							var diff_min = minPrice - costPrice;
+							this.averageMap.onMinPrice.wave = Number.parseFloat((this.averageMap.onMinPrice.wave + wave_min).toFixed(2));
+							this.averageMap.onMinPrice.diff = Number.parseFloat((this.averageMap.onMinPrice.diff + diff_min).toFixed(2));
+							
+							// 累计日上升区间的平均值
+							var wave_max = ((maxPrice - costPrice) / costPrice * 100 || 0);
+							var diff_max = maxPrice - costPrice;
+							this.averageMap.onMaxPrice.wave = Number.parseFloat((this.averageMap.onMaxPrice.wave + wave_max).toFixed(2));
+							this.averageMap.onMaxPrice.diff = Number.parseFloat((this.averageMap.onMaxPrice.diff + diff_max).toFixed(2));
+							
+							// 累计日当日区间的平均值
+							var wave_curr = ((maxPrice - minPrice) / minPrice * 100 || 0);
+							var diff_curr = maxPrice - minPrice;
+							this.averageMap.onCurrPrice.wave = Number.parseFloat((this.averageMap.onCurrPrice.wave + wave_curr).toFixed(2));
+							this.averageMap.onCurrPrice.diff = Number.parseFloat((this.averageMap.onCurrPrice.diff + diff_curr).toFixed(2));
+							
+						}
+					}
+					
+					// console.log(JSON.stringify(this.dataRuleGroup))
+				},
+				/**
+				 * 成本价和最低价
+				 * @param {Object} costPrice
+				 * @param {Object} minPrice
+				 */
+				costOnMinPrice:function(costPrice,minPrice) {
+					var wave = '震幅 ' + ((minPrice - costPrice) / costPrice * 100 || 0).toFixed(2) + '%，';
+					var diff = ' 价差 ' + (minPrice - costPrice).toFixed(2) + '元';
+					return wave + diff;
+				},
+				/**
+				 * 成本价和最高价
+				 * @param {Object} costPrice
+				 * @param {Object} maxPrice
+				 */
+				costOnMaxPrice:function(costPrice,maxPrice) {
+					var wave = '震幅 ' + ((maxPrice - costPrice) / costPrice * 100 || 0).toFixed(2) + '%，';
+					var diff = ' 价差 ' + (maxPrice - costPrice).toFixed(2) + '元';
+					return wave + diff;
+				},
+				/**
+				 * 最低价和最高价
+				 * @param {Object} minPrice
+				 * @param {Object} maxPrice
+				 */
+				minOnMaxPrice:function(minPrice,maxPrice) {
+					var wave = '震幅 ' + ((maxPrice - minPrice) / minPrice * 100 || 0).toFixed(2) + '%，';
+					var diff = ' 价差 ' + (maxPrice - minPrice).toFixed(2) + '元';
+					return wave + diff;
+				},
+				// 添加综合平均值计算
+				addCompute:function() {
+					if(this.statisCountMap.isButtonDisable) { return };
+					this.statisCountMap.isButtonDisable = true;
+					
+					this.statisCountMap.downs.push({
+						swing: this.getSectionAverageCompute('onMinPrice', 'wave'),
+						diff: this.getSectionAverageCompute('onMinPrice', 'diff'),
+					});
+					
+					this.statisCountMap.ups.push({
+						swing: this.getSectionAverageCompute('onMaxPrice', 'wave'),
+						diff: this.getSectionAverageCompute('onMaxPrice', 'diff'),
+					});
+					
+					this.statisCountMap.current.push({
+						swing: this.getSectionAverageCompute('onCurrPrice', 'wave'),
+						diff: this.getSectionAverageCompute('onCurrPrice', 'diff'),
+					});
+					
+					console.log(JSON.stringify(this.statisCountMap))
+				},
+			}
+		})
+	</script>
+</html>
