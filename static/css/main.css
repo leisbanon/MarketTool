@@ -13,7 +13,7 @@ body { height: 100%;background-color: rgba(40,44,53,0.75);color: white; }
 #app .diff button { padding: 0 15px;position: relative;top: 1px;color: #FF4500;cursor: pointer;font-family: cursive;font-size: 18px; }
 
 .data-diff { position: relative;margin-bottom: 100px; }
-.average-box ol li { margin-bottom: 11px; }
+.average-box ol,ul li { margin-bottom: 11px; }
 
 .console {position: absolute;top: 0;right: 0;line-height: 28px;padding-right: 22px;background: rgba(0,0,0,0.4);user-select: auto;z-index: 100;border-bottom-left-radius: 8px; }
 .console h3 {margin: 0;padding: 5px 0 0 12px;position: relative;}
@@ -29,3 +29,4 @@ body { height: 100%;background-color: rgba(40,44,53,0.75);color: white; }
 
 .red-color { color:  rgb(255, 69, 0); }
 .green-color { color: #00FF60; }
+.blue-color { color: #6495ED;}

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>跳空高开基础策略</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../../static/css/main.css"/>
+		<script src="../../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style>
+		.scale-label {
+			transform: scale(0.75);
+			display: inline-block;
+		}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 查询 -->
+			<div class="diff">
+				<h2 style="color: white;width: 288px;">查询：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
+				
+				<div class="box">
+					<span>* 股票代码：</span>
+					<input type="text" v-model="uad.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" @input="reset" />
+					
+					<span>&emsp;* 日期：</span>
+					<input type="date" v-model="uad.date" placeholder="请输入查询日期" @change="onDateChange"/>
+					
+					<button type="button" @click="getStockInfo" style="margin-left: 18px;">查询</button>
+				</div>
+				
+				<div class="data-diff average-box" style="margin: 0px;">
+					<ol>
+						<li>日&emsp;期：{{ resForm.date }}</li>
+						<li>
+							<span>开盘价：{{ resForm.open_price }} REM，</span>
+							<span>收盘价：{{ resForm.close_price }} REM</span>
+						</li>
+						<li>
+							<span>最低价：{{ resForm.min_price }} REM，</span>
+							<span>最高价：{{ resForm.max_price }} REM</span>
+						</li>
+					</ol>
+				</div>
+			</div>
+			
+			<!--  -->
+			<div class="data-diff average-box">
+				<h2 style="width: 448px;">Stratery Compute</h2>
+				<ul>
+					<li title="开盘价 - 最低价">开盘价绝对价差<span class="scale-label">-下影线</span>（OP-DIFF）：{{ opDiff() }}</li>
+					<li title="最高价 - 收盘价">收盘价绝对价差<span class="scale-label">-上影线</span>（CI-DIFF）：{{ ciDiff() }}</li><br/>
+					
+					<li title="开盘价与最低价的下跌比率">开盘价绝对跌幅<span class="scale-label">-下影线</span>（OP-RATE）：{{ opRate() }}{{ opRate() != '/' ? '%' : ''}}</li>
+					<li title="收盘价与最高价的上升比率">收盘价绝对升幅<span class="scale-label">-上影线</span>（CI-RATE）：{{ ciRate() }}{{ ciRate() != '/' ? '%' : ''}}</li><br/>
+					
+					<li title="OP-RATE 比 CI-RATE">OP-RATE 与 CI-RATE 博弈比值：{{ op_ci_rate() }}</li>
+				</ul>
+			</div>
+		</div>
+	</body>
+	
+	<script type="text/javascript" src="../../static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../../stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[$commonMinxin],
+			data() {
+				return {
+					uad:{
+						code:'', // 股票代码
+						date:window.moment().format('YYYY-MM-DD'), // 日期
+					},
+					
+					resForm: { // 请求结果数据
+						date:'', 
+						open_price: 0,
+						close_price: 0,
+						min_price: 0,
+						max_price: 0,
+					}, 
+				}
+			},
+			computed:{
+				
+			},
+			methods:{
+				/**
+				 * OP-RATE 与 CI-RATE 博弈比值
+				 */
+				op_ci_rate() {
+					var number = (this.opRate() - this.ciRate()) / this.opRate() * 100;
+					if(!isNaN(number)) {
+						return number.toFixed(2) + '%';
+					}else {
+						return '/'
+					}
+				},
+				/**
+				 * 收盘价绝对升幅
+				 */
+				ciRate() {
+					if(this.resForm.close_price && this.resForm.max_price) {
+						var result = (this.resForm.close_price - this.resForm.max_price) / this.resForm.close_price * 100;
+						return Math.abs((result || 0)).toFixed(2);
+					}else {
+						return '/'
+					}
+				},
+				/**
+				 * 开盘价绝对跌幅
+				 */
+				opRate() {
+					if(this.resForm.open_price && this.resForm.min_price) {
+						var result = (this.resForm.open_price - this.resForm.min_price) / this.resForm.open_price * 100;
+						return (result || 0).toFixed(2);
+					}else {
+						return '/'
+					}
+				},
+				/**
+				 * 开盘绝对价差
+				 */
+				opDiff() {
+					if(this.resForm.open_price && this.resForm.min_price) {
+						return Math.abs((this.resForm.open_price - this.resForm.min_price)).toFixed(2) + ' REM';
+					}else {
+						return '/'
+					}
+				},
+				/**
+				 * 收盘绝对价差
+				 */
+				ciDiff() {
+					if(this.resForm.close_price && this.resForm.max_price) {
+						return Math.abs((this.resForm.close_price - this.resForm.max_price)).toFixed(2) + ' REM';
+					}else {
+						return '/'
+					}
+				},
+				/**
+				 * 日期发生变化
+				 */
+				onDateChange() {
+					this.reset();
+					this.getStockInfo();
+				},
+				/**
+				 * 按键监听
+				 */
+				onKeyUps:function(event) {
+					if(event.keyCode == 13) {
+						this.getStockInfo()
+					}
+				},
+				/**
+				 * 查询个股基本信息
+				 */
+				getStockInfo:function() {
+					var _this = this;
+					if(this.stock.isRequest === true) { return }
+					
+					this.fetchStockInfo(this.uad.code,function(data) {
+						Object.assign(_this.stock,data)
+						_this.getStockHistory(data.code);
+						_this.stock.isRequest = true;
+					})
+				},
+				/**
+				 * 获取个股行情数据
+				 */
+				getStockHistory:function(code) {
+					var _this = this;
+					
+					var beginTime = moment(this.uad.date).subtract(1, 'days').format('YYYY-MM-DD');
+					var endTime = moment(this.uad.date).format('YYYY-MM-DD');
+					this.fetchStockHistory(code, beginTime, endTime, function(list) {
+						Object.assign(_this.resForm, list[0]);
+					})
+				},
+			}
+		})
+	</script>
+</html>

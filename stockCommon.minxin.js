@@ -48,6 +48,7 @@ var $commonMinxin = {
 	},
 	methods:{
 		reset:function() {
+			console.log('Reset.....')
 			this.stock.isRequest = false;
 		},
 		/**
