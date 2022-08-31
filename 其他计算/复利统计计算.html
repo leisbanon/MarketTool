@@ -11,12 +11,12 @@
 		#app { margin-left: 28px; }
 		.details ol li {padding: 8px 0;border-bottom: 1px #888 solid;}
 		.details ol li span { display: inline-block;margin-right: 22px; }
-		.footer-count {text-align: left;display: inline-block;padding: 3px 12px;border-radius: 100px;background: white;color: rgb(255, 69, 0);}
+		.footer-count {text-align: left;display: inline-block;padding: 0px 12px;border-radius: 100px;background: white;color: rgb(255, 69, 0);margin-right: 30px;height: 27px;line-height: 27px;}
 		.describe {transform: scale(0.85);transform-origin: left top;line-height: 25px;color: rgba(255,167,0);}
 		
 		.lines-box {position: relative;}
 		.lines-box::before {content: '';border-right: 1px #888 solid;position: absolute;top: 4px;bottom: 0;right: -17px;}
-		.result-compute {display: inline-flex;margin-left: 30px;}
+		.result-compute {display: inline-flex;background: transparent;border: 1px #FFF solid;}
 		.result-compute div {margin-right: 22px;}
 	</style>
 	
@@ -66,24 +66,32 @@
 			
 			<div class="diff details">
 				<h2>Compute Result ：</h2>
+				<!-- 总计额 -->
 				<div class="footer-count">
 					<font color="#333">总&emsp;计：</font>
-					<font>{{ formatMoney(moneyCount) }}</font>
+					<font>{{ detailList.length > 0 ? formatMoney(detailList[detailList.length - 1].netMoneyCount) : formatMoney(0)}}</font>
 				</div>
 				
+				<!-- 总计收益率 -->
+				<div class="footer-count">
+					<font color="#333">收益率：</font>
+					<font>{{ profitRate() }}%</font>
+				</div>
+				
+				<!-- 总计手续费 -->
 				<div class="result-compute footer-count">
 					<div>
-						<font color="#333">佣金总额：</font>
+						<font color="#FFF">佣金总额：</font>
 						<font>{{ formatMoney(commissionCount()) }}</font>
 					</div>
 					
 					<div>
-						<font color="#333">印花税总额：</font>
+						<font color="#FFF">印花税总额：</font>
 						<font>{{ formatMoney(stampDutyCount()) }}</font>
 					</div>
 					
 					<div>
-						<font color="#333">合计交易手续费：</font>
+						<font color="#FFF">合计交易手续费：</font>
 						<font>{{ formatMoney(commissionCount() + stampDutyCount()) }}</font>
 					</div>
 				</div>
@@ -136,6 +144,18 @@
 				this.compoundInterestCompute();
 			},
 			methods:{
+				/**
+				 * 收益率
+				 */
+				profitRate:function() {
+					if(this.detailList.length > 0) {
+						var _netMoneyCount = this.detailList[this.detailList.length - 1].netMoneyCount;
+						var _rate = (_netMoneyCount - this.form.initMoney) / this.form.initMoney * 100;
+						return _rate.toFixed(2);
+					}else {
+						return 0;
+					}
+				},
 				/**
 				 * 印花税总额
 				 */
