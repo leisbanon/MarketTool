@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<meta charset="utf-8" />
+		<meta charset="UTF-8" />
 		<title>复利统计计算</title>
 		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
 		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
@@ -12,12 +12,19 @@
 		.details ol li {padding: 8px 0;border-bottom: 1px #888 solid;}
 		.details ol li span { display: inline-block;margin-right: 22px; }
 		.footer-count {text-align: left;display: inline-block;padding: 3px 12px;border-radius: 100px;background: white;color: rgb(255, 69, 0);}
+		.describe {transform: scale(0.85);transform-origin: left top;line-height: 25px;color: rgba(255,167,0);}
+		
+		.lines-box {position: relative;}
+		.lines-box::before {content: '';border-right: 1px #888 solid;position: absolute;top: 4px;bottom: 0;right: -17px;}
+		.result-compute {display: inline-flex;margin-left: 30px;}
+		.result-compute div {margin-right: 22px;}
 	</style>
 	
 	<body>
 		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
 		
 		<div id="app">
+			<!-- 全局数值设定 -->
 			<div class="diff">
 				<h2 style="color: white;">全局数值设定：</h2>
 				<span>初始金：</span>
@@ -30,6 +37,24 @@
 				<input type="number" v-model="form.compoundInterestRateDay" @input="compoundInterestCompute" style="width: 80px;" />
 			</div>
 			
+			<!-- 包含手续费 -->
+			<div class="diff">
+				<h2 style="color: white;">包含手续费：</h2>
+				<span>佣金：</span>
+				<input type="number" v-model="form.commission" @input="compoundInterestCompute" style="width: 80px;" placeholder="请输入佣金" /> %
+				
+				<span>&emsp;印花税：{{ form.stampDuty }}%</span>
+				
+				<span>&emsp;过 户 费：/</span>
+				
+				<ol class="describe">
+					<li>佣金：双边收取，按照成交金额进行结算，不足5元按照 “5元” 收取</li>
+					<li>印花税：单边收取，固定为卖出成交金额的 “千分之一”</li>
+					<li>过户费：双边收取，按照成交金额的 “千分之0.1” 收取，（2022年4月29日起，将股票交易过户费总体下调50%，即原来是万分之二），仅上海市场收取</li>
+				</ol>
+			</div>
+			
+			<!-- 负利率周期 -->
 			<div class="diff">
 				<h2 style="color: white;">负利率周期：</h2>
 				<span>指定周期负利率：</span>
@@ -43,14 +68,35 @@
 				<h2>Compute Result ：</h2>
 				<div class="footer-count">
 					<font color="#333">总&emsp;计：</font>
-					<font>{{ window.accounting.formatMoney(moneyCount, { symbol: '¥' }) }}</font>
+					<font>{{ formatMoney(moneyCount) }}</font>
 				</div>
+				
+				<div class="result-compute footer-count">
+					<div>
+						<font color="#333">佣金总额：</font>
+						<font>{{ formatMoney(commissionCount()) }}</font>
+					</div>
+					
+					<div>
+						<font color="#333">印花税总额：</font>
+						<font>{{ formatMoney(stampDutyCount()) }}</font>
+					</div>
+					
+					<div>
+						<font color="#333">合计交易手续费：</font>
+						<font>{{ formatMoney(commissionCount() + stampDutyCount()) }}</font>
+					</div>
+				</div>
+				
 				<ol>
 					<li :class="{'green-color': item.compoundInterestRate <= 0 }" v-for="(item, index) of detailList" :key="index">
-						<span>当前总金额：{{ window.accounting.formatMoney(item.amount, { symbol: '¥' }) }}</span>
-						<span>复利率：{{ item.compoundInterestRate }}</span>
-						<span>交易手续费率：-</span>
-						<span>当前结算：{{ window.accounting.formatMoney(item.moneyCount, { symbol: '¥' }) }}</span>
+						<span class="orange-color">当前总金额：{{ formatMoney(item.amount) }}</span>
+						<span>复利率：{{ item.compoundInterestRate }}%</span>
+						<span class="lines-box">当前结算：{{ formatMoney(item.moneyCount) }}</span>
+						
+						<span>佣金：{{ formatMoney(item.commission) }}（买：{{ formatMoney(item._buyCommission) }}，卖：{{ formatMoney(item._sellCommission) }}）</span>
+						<span>印花税：{{ formatMoney(item.stampDuty) }}</span>
+						<span class="orange-color">净值结算：{{ formatMoney(item.netMoneyCount) }}</span>
 					</li>
 				</ol>
 			</div>
@@ -73,9 +119,13 @@
 					
 					form: {
 						initMoney: 10000, // 初始金
-						compoundInterestRate: 1.5, // 复利率
-						compoundInterestRateDay: 3, // 复利天数
-						serviceChargeRate: 0.25, // 交易手续费率
+						compoundInterestRate: 2, // 复利率
+						compoundInterestRateDay: 1, // 复利天数
+						
+						commission: 0.02, // 佣金
+						stampDuty: 0.1, // 印花税
+						transferFee: 0.01, // 过户费
+						
 						
 						minusInterestRate: 1.5, // 指定周期负利率
 						minusCycleDay: 5, // 指定周期（天）负利率
@@ -86,6 +136,32 @@
 				this.compoundInterestCompute();
 			},
 			methods:{
+				/**
+				 * 印花税总额
+				 */
+				stampDutyCount:function() {
+					var _count = 0;
+					for(var list of this.detailList) {
+						_count += Number(list.stampDuty)
+					}
+					return _count;
+				},
+				/**
+				 * 佣金总额
+				 */
+				commissionCount:function() {
+					var _count = 0;
+					for(var list of this.detailList) {
+						_count += Number(list.commission)
+					}
+					return _count;
+				},
+				/**
+				 * 格式化金额
+				 */
+				formatMoney:function(money) {
+					return window.accounting.formatMoney(money, { symbol: '¥' })
+				},
 				compoundInterestCompute:function() {
 					var _this = this;
 					var form = this.form;
@@ -98,22 +174,49 @@
 							console.log('pollingCount => ' + pollingCount);
 							
 							
-							// 自定义条件计算
+							// 自定义条件计算 - 指定周期负利率
 							if(pollingCount % form['minusCycleDay'] === 0) {
 								_this.moneyCount = amount + (amount * -form['minusInterestRate'] / 100);
 							}else {
 								_this.moneyCount = amount + (amount * form['compoundInterestRate'] / 100);
 							}
 							
+							// 买入佣金
+							var _buyCommission = amount * form['commission'] / 100;
+							_buyCommission = _buyCommission > 5 ? _buyCommission : 5;
+							
+							
+							// 卖出佣金
+							var _sellCommission = _this.moneyCount * form['commission'] / 100;
+							_sellCommission = _sellCommission > 5 ? _sellCommission : 5;
+							
+							// 印花税
+							var _stampDuty = _this.moneyCount * form['stampDuty'] / 100;
+							
+							// 净值结算
+							var _netMoneyCount =  _this.moneyCount - (_buyCommission + _sellCommission + _stampDuty);
 							
 							var data = {
+								// 当前总金额
 								amount: amount,
+								// 复利率
 								compoundInterestRate: pollingCount % form['minusCycleDay'] === 0 ? -(form['minusInterestRate']) : form['compoundInterestRate'],
-								serviceChargeRate: form['serviceChargeRate'],
+								// 当前结算
 								moneyCount: _this.moneyCount,
+								
+								// 佣金
+								commission: (_buyCommission + _sellCommission).toFixed(2),
+								// 买入佣金
+								_buyCommission: _buyCommission,
+								// 卖出佣金
+								_sellCommission: _sellCommission,
+								// 印花税
+								stampDuty: _stampDuty.toFixed(2),
+								// 净值结算金额
+								netMoneyCount: _netMoneyCount.toFixed(2),
 							}
 							list.push(data);
-							compounds(_this.moneyCount);
+							compounds(_netMoneyCount);
 						}else {
 							_this.detailList = JSON.parse(JSON.stringify(list));
 							// console.log(JSON.stringify(_this.detailList))
