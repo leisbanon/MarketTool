@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>日内出货交易策略</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../../static/css/main.css"/>
+		<script src="../../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style>
+		#app { margin-left: 28px; }
+		.blocks {list-style: none;padding: 0;margin: 0;display: inline-block;margin-right: 110px;position: relative;}
+		.blocks:not(:last-child)::after {content: '';border-right: 1px #888 solid;position: absolute;top: 164px;bottom: 89px;right: -55px;}
+		
+		.blocks li{display: flex;margin-bottom: 18px;}
+		.stratery-type {text-align: left;display: inline-block;padding: 0px 12px;border-radius: 100px;background: white;margin-right: 30px;height: 27px;line-height: 27px;margin-bottom: 38px;border: 1px #FFF solid;background: transparent;}
+		
+		.after-list div {padding: 8px 0;border-bottom: 1px #888 solid;}
+		.after-list div:first-child {padding-top: 0;}
+		.sbu-text {
+			padding: 0;
+			display: inline-block;
+			transform: scale(0.8);
+		}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 查询 -->
+			<div class="diff">
+				<h2 style="color: white;width: 288px;">参数值设定：</h2>
+				
+				<div class="box">
+					<span>成本价：</span>
+					<input type="number" v-model="uad.openingPrice" placeholder="请输入价格" />
+					
+					<span>&emsp;总股数：</span>
+					<input type="number" v-model="uad.vol" placeholder="请输入价格" />
+					
+					<span>&emsp;预期涨幅：</span>
+					<input type="number" v-model="uad.rate" placeholder="请输入价格" style="width: 80px;" /> %
+					
+					<span>&emsp;市场价：{{ uad.closingPrice }}</span>
+				</div>
+			</div>
+			
+			<div class="data-diff average-box">
+				<h2 style="width: 448px;">Stratery Compute</h2>
+				<div class="stratery-type">
+					<span>单次全仓：</span>
+					<span>{{ uad.openingPrice }} * {{ uad.vol }} * {{ uad.rate }}%</span>
+					<span>=</span>
+					<span>{{ formatMoney(uad.openingPrice * uad.vol * (uad.rate / 100)) }}</span>
+				</div>
+				
+				<div id="stratery-container">
+					<ul class="blocks" v-for="count in 3">
+						<li class="red-color" style="font-size: 22px;">({{ count + 1}}分之1)先仓出货：</li>
+						<!-- 先仓 -->
+						<li>
+							<div class="orange-color">先仓：</div>
+							<div>
+								<span>{{ uad.openingPrice }} * {{ stockParseInt(count) }} * {{ uad.rate }}%</span>
+								<span>=</span>
+								<span>{{ formatMoney(uad.openingPrice * stockParseInt(count) * (uad.rate / 100)) }}</span>
+							</div>
+						</li>
+						
+						<!-- 后仓 -->
+						<li>
+							<div class="orange-color">后仓：</div>
+							<div class="after-list">
+								<div v-for="number in floatRates">
+									<span>{{ uad.openingPrice }} * {{ uad.vol - stockParseInt(count) }} * {{ number }}%</span>
+									<span>=</span>
+									<span>{{ formatMoney(uad.openingPrice * (uad.vol - stockParseInt(count)) * (number / 100)) }}</span>
+									
+									<span class="sbu-text">
+										- <font class="red-color">{{ formatMoney((uad.openingPrice * stockParseInt(count) * (uad.rate / 100)) + (uad.openingPrice * (uad.vol - stockParseInt(count)) * (number / 100))) }}</font>
+									</span>
+								</div>
+							</div>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</body>
+	
+	<script src="../../static/js/accounting.min.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="../../static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../../stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[$commonMinxin],
+			data() {
+				return {
+					floatRates:[
+						0.5, 1, 1.5, 2,
+						2.5, 3, 3.5, 4,
+						4.5, 5, 5.5, 6,
+						7, 8, 9, 10,
+					],
+					
+					uad:{
+						openingPrice: 10,
+						vol: 1000,
+						rate: 2,
+						closingPrice: '/',
+					},
+				}
+			},
+			computed:{
+				
+			},
+			methods:{
+				/**
+				 * 股数取整
+				 */
+				stockParseInt:function(count) {
+					return Number.parseInt(this.uad.vol * 1 / (count + 1) / 100) * 100
+				},
+				/**
+				 * 格式化金额
+				 */
+				formatMoney:function(money) {
+					return window.accounting.formatMoney(money, { symbol: '¥' })
+				},
+			}
+		})
+	</script>
+</html>
