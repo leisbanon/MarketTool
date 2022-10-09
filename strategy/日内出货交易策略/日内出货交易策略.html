@@ -23,6 +23,17 @@
 			display: inline-block;
 			transform: scale(0.8);
 		}
+		
+		.describe {transform: scale(0.85);transform-origin: left top;line-height: 25px;color: rgba(255,167,0);}
+		
+		.data-view {
+			padding: 0;
+			margin: 0;
+			margin-top: 5px;
+			transform: scale(0.8);
+			transform-origin: left bottom;
+		}
+		.data-view-block {display: block;margin-bottom: 3px;}
 	</style>
 	
 	<body>
@@ -47,13 +58,29 @@
 				</div>
 			</div>
 			
+			<!-- 包含手续费 -->
+			<div class="diff">
+				<h2 style="color: white;">包含手续费：</h2>
+				<span>佣金：0.02%</span>
+				
+				<span>&emsp;印花税：0.1%</span>
+				
+				<span>&emsp;过 户 费：/</span>
+				
+				<ol class="describe">
+					<li>佣金：双边收取，按照成交金额进行结算，不足5元按照 “5元” 收取</li>
+					<li>印花税：单边收取，固定为卖出成交金额的 “千分之一”</li>
+					<li>过户费：双边收取，按照成交金额的 “千分之0.1” 收取，（2022年4月29日起，将股票交易过户费总体下调50%，即原来是万分之二），仅上海市场收取</li>
+				</ol>
+			</div>
+			
 			<div class="data-diff average-box">
 				<h2 style="width: 448px;">Stratery Compute</h2>
 				<div class="stratery-type">
 					<span>单次全仓：</span>
 					<span>{{ uad.openingPrice }} * {{ uad.vol }} * {{ uad.rate }}%</span>
 					<span>=</span>
-					<span>{{ formatMoney(uad.openingPrice * uad.vol * (uad.rate / 100)) }}</span>
+					<span>{{ formatMoney(onceSellAllCompute()) }}</span>
 				</div>
 				
 				<div id="stratery-container">
@@ -65,7 +92,7 @@
 							<div>
 								<span>{{ uad.openingPrice }} * {{ stockParseInt(count) }} * {{ uad.rate }}%</span>
 								<span>=</span>
-								<span>{{ formatMoney(uad.openingPrice * stockParseInt(count) * (uad.rate / 100)) }}</span>
+								<span>{{ formatMoney(firstStockCompute(count)) }}</span>
 							</div>
 						</li>
 						
@@ -74,13 +101,23 @@
 							<div class="orange-color">后仓：</div>
 							<div class="after-list">
 								<div v-for="number in floatRates">
-									<span>{{ uad.openingPrice }} * {{ uad.vol - stockParseInt(count) }} * {{ number }}%</span>
+									<span>{{ uad.openingPrice }} * {{ uad.vol - stockParseInt(count) }} * </span>
+									<span title="涨跌幅" :class="number >= 0 ? 'red-color' : 'green-color'">{{ number }}%</span>
 									<span>=</span>
-									<span>{{ formatMoney(uad.openingPrice * (uad.vol - stockParseInt(count)) * (number / 100)) }}</span>
+									<span>{{ formatMoney(afterStockCompute(count, number)) }}</span>
 									
-									<span class="sbu-text">
-										- <font class="red-color">{{ formatMoney((uad.openingPrice * stockParseInt(count) * (uad.rate / 100)) + (uad.openingPrice * (uad.vol - stockParseInt(count)) * (number / 100))) }}</font>
-									</span>
+									<ul class="data-view">
+										『<span>实际盈利：{{ formatMoney(afterStockCompute(count, number), false) }} + {{ formatMoney(firstStockCompute(count), false) }} - </span>
+										<span class="green-color" title="手续费（双边计算）：佣金 + 印花税">{{ poundageCompute(count, number).toFixed(2) }}</span>
+										<span>=</span>
+										<span class="red-color">{{ formatMoney(afterStockCompute(count, number) + firstStockCompute(count) - poundageCompute(count, number)) }}</span>』
+										
+										<span class="data-view-block"></span>
+										『<span>单次全仓差：{{ formatMoney(afterStockCompute(count, number) + firstStockCompute(count) - poundageCompute(count, number), false) }} - </span>
+										<span>{{ formatMoney(onceSellAllCompute(), false) }}</span>
+										<span>≈</span>
+										<span class="red-color">{{ formatMoney(afterStockCompute(count, number) + firstStockCompute(count) - poundageCompute(count, number) - onceSellAllCompute()) }}</span>』
+									</ul>
 								</div>
 							</div>
 						</li>
@@ -101,6 +138,8 @@
 			data() {
 				return {
 					floatRates:[
+						-5.33, -4.5, -4, -3.5,
+						-3, -2.5, -2, -1.5, -1, -0.5, 0,
 						0.5, 1, 1.5, 2,
 						2.5, 3, 3.5, 4,
 						4.5, 5, 5.5, 6,
@@ -119,8 +158,57 @@
 				
 			},
 			methods:{
+				// 单次全仓卖出结果计算
+				onceSellAllCompute:function() {
+					return this.uad.openingPrice * this.uad.vol * (this.uad.rate / 100);
+				},
+				// 先仓出货结果计算
+				firstStockCompute:function(count) {
+					return this.uad.openingPrice * this.stockParseInt(count) * (this.uad.rate / 100);
+					
+				},
+				// 后仓出货结果计算
+				afterStockCompute:function(count, number) {
+					return this.uad.openingPrice * (this.uad.vol - this.stockParseInt(count)) * (number / 100);
+				},
+				// 手续费；
+				poundageCompute(count, number) {
+					// 买入佣金
+					var buyCommission = this.uad.openingPrice * this.uad.vol * 0.0002;
+					buyCommission = buyCommission > 5 ? buyCommission : 5;
+					
+					// 卖出佣金一（先仓）
+					var sellAmountFrist = this.uad.openingPrice * this.stockParseInt(count);
+					var sellCommissionFrist = (sellAmountFrist + (sellAmountFrist * this.uad.rate / 100)) * 0.0002;
+					sellCommissionFrist = sellCommissionFrist > 5 ? sellCommissionFrist : 5;
+					
+					// 卖出佣金二（后仓）
+					var sellAmountAfter = this.uad.openingPrice * (this.uad.vol - this.stockParseInt(count));
+					var sellCommissionAfter = (sellAmountAfter + (sellAmountAfter * number / 100)) * 0.0002;
+					sellCommissionAfter = sellCommissionAfter > 5 ? sellCommissionAfter : 5;
+					
+					// 印花税一（先仓）
+					var sellStampDutyFirst = (sellAmountFrist + (sellAmountFrist * this.uad.rate / 100)) * 0.001;
+					// 印花税二（后仓）
+					var sellStampDutyAfter = (sellAmountAfter + (sellAmountAfter * number / 100)) * 0.001;
+					
+					var serveAmountAllObj = {
+						buyCommission: buyCommission,
+						sellCommissionFrist: sellCommissionFrist,
+						sellCommissionAfter: sellCommissionAfter,
+						sellStampDutyFirst: sellStampDutyFirst,
+						sellStampDutyAfter: sellStampDutyAfter,
+					}
+					console.log('手续费：' + JSON.stringify(serveAmountAllObj))
+					
+					var serveAmoountCount = 0;
+					for(var key in serveAmountAllObj) {
+						serveAmoountCount += serveAmountAllObj[key];
+					}
+					return serveAmoountCount;
+				},
 				/**
-				 * 股数取整
+				 * 仓位股数取整
 				 */
 				stockParseInt:function(count) {
 					return Number.parseInt(this.uad.vol * 1 / (count + 1) / 100) * 100
@@ -128,8 +216,8 @@
 				/**
 				 * 格式化金额
 				 */
-				formatMoney:function(money) {
-					return window.accounting.formatMoney(money, { symbol: '¥' })
+				formatMoney:function(money, unit) {
+					return window.accounting.formatMoney(money, { symbol: unit === false ? '' : '¥' })
 				},
 			}
 		})
