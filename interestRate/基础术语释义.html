@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>基础术语释义</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style>
+		.describe {line-height: 25px;}
+		.describe li {clear: left;}
+		.describe li span {float: left;font-size: 14px !important;}
+		.describe li .til {width: 88px;}
+		.describe li .content {display: inline-block;white-space: normal;width: 82%;color: white;text-decoration: underline;margin-bottom: 8px;}
+	</style>
+	
+	<body>
+		<div id="app">
+			<!-- 基础术语释义 -->
+			<div class="diff">
+				<h2 style="color: white;">基础术语释义：</h2>
+				<ol class="describe orange-color">
+					<li>
+						<span class="til">按揭：</span>
+						<span class="content">按揭就是贷款，也就是向银行借钱。通过以所购房屋或者物品作为抵押向银行贷款，然后分期偿还。</span>
+					</li>
+					
+					<li>
+						<span class="til">质押和抵押：</span>
+						<span class="content">物权的转移不同，质押和抵押的根本区别在于是否转移担保财务的占用；抵押不转移对抵押物的占用形态，任由抵押人负责保管抵押物的保管；质押改变了质押物的占管形态，由质权人负责对质押物的保管。</span>
+					</li>
+					
+					<li>
+						<span class="til">货币单位：</span>
+						<span class="content">货币单位为别有元、角、分、厘；<br/>
+						换算：1元 = 10角，1角 = 10分，1分 = 10厘；</span>
+					</li>
+				</ol>
+			</div>
+		</div>
+	</body>
+	
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			data() {
+				return {
+					
+				}
+			},
+			mounted:function() {
+				// console.log(window.moment().format('YYYYMMDDHHMMSS'))
+				
+				// var x = new moment('2022-10-29')
+				// var y = new moment('2023-10-29')
+				// var duration = moment.duration(y.diff(x));
+				// console.log(duration._data)
+				
+				var x = new moment('2022-11-11')
+				var y = new moment('2022-12-11')
+				var duration = moment.duration(y.diff(x));
+				console.log(duration._data)
+				
+				// var date = moment().add(365, 'day').add();
+				// console.log(date.format('YYYY-MM-DD'))
+			}
+		})
+	</script>
+</html>

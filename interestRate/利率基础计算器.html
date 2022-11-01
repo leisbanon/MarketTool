@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>商业利率-基础计算器</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style>
+		.describe {line-height: 25px;}
+		.describe li {clear: left;}
+		.describe li span {float: left;font-size: 14px !important;}
+		.describe li .til {width: 88px;}
+		.describe li .content {display: inline-block;white-space: normal;width: 82%;color: white;text-decoration: underline;margin-bottom: 8px;}
+		.inlineBlock {display: inline-block;}
+		.amount-type {transform: scale(1.2);transform-origin: left bottom;margin: 25px 0;width: 50%;}
+		
+		.detail-tables {border-collapse: collapse;width: 80%;min-width: 600px;text-align: center;}
+		.detail-tables tr {border: 1px #888 solid;}
+		.detail-tables thead tr {font-style: italic;height: 39px;}
+		.detail-tables tbody tr {height: 35px;}
+		.detail-tables tfoot tr {height: 39px;color: #333;background: white;}
+		
+		.unit-format-box strong {
+			float: left;
+			margin-top: 11px;
+			font-size: 18px;
+			text-decoration: underline;
+		}
+		.unit-format-box ul {
+			position: relative !important;
+			list-style: none;
+			padding-left: 11px;
+		}
+		.unit-format-box li {
+			position: relative;
+			margin-bottom: 17px;
+			margin-right: 15px;
+		}
+		.unit-format-box .ul-lines li::after {
+			content: '';
+			position: absolute;
+			border-bottom: 1px #DDD;
+			border-bottom-style: dashed;
+			transform: scaleY(0.65);
+			width: 600px;
+			left: 0;
+			bottom: -8px;
+		}
+		
+		.repay-amount-box {
+			margin-left: 108px;
+		}
+		.repay-amount-box .repay-amount-submit {
+			display: inline-block;
+			background-color: #6495ED;
+			padding: 3px 15px;
+			border-radius: 50px;
+			cursor: pointer;
+			user-select: none;
+		}
+		.repay-amount-box .repay-amount-submit:active {
+			opacity: 0.85;
+		}
+		
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 参数值设定 -->
+			<div class="diff">
+				<h2 style="color: white;">参数值设定：</h2>
+				
+				<!-- 资金方式 -->
+				<div class="box amount-type">
+					<span class="red-color">请选择资金方式：</span>
+					<label for="deposit"><input v-model="form.amountType" type="radio" id="deposit" @change="initChangeCompute" value="DEPOSIT" disabled />存款</label>
+					
+					<label for="loan"><input v-model="form.amountType" type="radio" id="loan" @change="initChangeCompute" value="LOAN" />贷款</label>
+				</div>
+				
+				<!-- 金额 -->
+				<div class="box">
+					<span>{{ returnAmoutType }}款金额：</span>
+					<input type="number" v-model="form.choiceAmount" @input="initChangeCompute" style="width: 120px;"/> <span style="width: 45px;display: inline-block;">元</span>
+					
+					<!-- 存款类型 -->
+					<div class="inlineBlock" v-if="form.amountType == 'DEPOSIT'">
+						<span>&emsp;存款类型：</span>
+						<select v-model="form.depositType" style="width: 90px;" @change="initChangeCompute">
+							<option v-for="(item,index) in arrays.depositTypeList" :value="item.value" :key="index">{{ item.text }}</option>
+						</select>
+					</div>
+					
+					<!-- 贷款类型 -->
+					<div class="inlineBlock" v-if="form.amountType == 'LOAN'">
+						<span>&emsp;贷款类型：</span>
+						<select v-model="form.loanType" style="width: 90px;" @change="initChangeCompute">
+							<option v-for="(item,index) in arrays.loanTypeList" :value="item.value" :key="index">{{ item.text }}</option>
+						</select>
+					</div>
+					
+					<!-- 反推利率 -->
+					<div class="inlineBlock repay-amount-box">
+						<span>每月还款：</span>
+						<input type="number" v-model="form.repayAmount" style="width: 120px;" disabled/>
+						<div class="repay-amount-submit" @click="onReckon">反推利率</div>
+					</div>
+				</div>
+				
+				<div class="box">
+					<!-- 利率 -->
+					<span>{{ returnAmoutType }}款利率：</span>
+					<input type="number" v-model="form.rateSize" style="width: 120px;" @input="initChangeCompute"/>
+					<select v-model="form.rateUnit" style="width: 45px;" @change="initChangeCompute">
+						<option v-for="(item,index) in arrays.rateUnitList" :value="item.value" :key="index">{{ item.text }}</option>
+					</select>
+					
+					<!-- 周期 -->
+					<span>&emsp;{{ returnAmoutType }}款周期：</span>
+					<input type="number" v-model="form.cycleSize" style="width: 120px;" @input="initChangeCompute"/>
+					
+					<select v-model="form.cycleUnit" style="width: 45px;" @change="initChangeCompute">
+						<option v-for="(item,index) in arrays.cycleUnitList" :value="item.value" :key="index">{{ item.text }}</option>
+					</select>
+					
+					<span class="orange-color">&emsp;{{ returnAmoutType }}款周期：{{ form.cycleSize }}{{ cycleUnitFormat }}</span>
+				</div>
+				
+				<!-- 货币单位利率转换 -->
+				<div class="box">
+					<div class="unit-format-box">
+						<strong class="orange-color">货币单位/利率转换：</strong>
+						<ul class="ul-lines">
+							<li>年：{{ rateUnitFormat('YEAR') }}%</li>
+							<li>月：{{ rateUnitFormat('MONTH') }}%</li>
+							<li>日：{{ rateUnitFormat('DAY') }}%</li>
+						</ul>
+						
+						<ul>
+							<li>{{ offFloorReturn(rateUnitFormat('YEAR') / 100, 4) }}</li>
+							<li>{{ offFloorReturn(rateUnitFormat('MONTH') / 100, 4) }}</li>
+							<li>{{ offFloorReturn(rateUnitFormat('DAY') / 100, 4) }}</li>
+						</ul>
+						
+						<ul>
+							<li>{{ getFloorFormat('YEAR', 'Y') }}元</li>
+							<li>{{ getFloorFormat('MONTH', 'Y') }}元</li>
+							<li>{{ getFloorFormat('DAY', 'Y') }}元</li>
+						</ul>
+						
+						<ul>
+							<li>{{ getFloorFormat('YEAR', 'M') }}毛</li>
+							<li>{{ getFloorFormat('MONTH', 'M') }}毛</li>
+							<li>{{ getFloorFormat('DAY', 'M') }}毛</li>
+						</ul>
+						
+						<ul>
+							<li>{{ getFloorFormat('YEAR', 'F') }}分</li>
+							<li>{{ getFloorFormat('MONTH', 'F') }}分</li>
+							<li>{{ getFloorFormat('DAY', 'F') }}分</li>
+						</ul>
+						
+						<ul>
+							<li>{{ getFloorFormat('YEAR', 'L') }}厘</li>
+							<li>{{ getFloorFormat('MONTH', 'L') }}厘</li>
+							<li>{{ getFloorFormat('DAY', 'L') }}厘</li>
+						</ul>
+						
+						<ul>
+							<li>{{ getFloorFormat('YEAR', 'H') }}毫</li>
+							<li>{{ getFloorFormat('MONTH', 'H') }}毫</li>
+							<li>{{ getFloorFormat('DAY', 'H') }}毫</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+			
+			<div class="diff">
+				<h2>Compute Result ：</h2>
+				<table class="detail-tables">
+					<thead>
+						<tr class="green-color">
+							<th>期次</th>
+							<th>偿还本金</th>
+							<th>偿还利息</th>
+							<th>偿还本息</th>
+							<th>剩余本金</th>
+						</tr>
+					</thead>
+					
+					<tbody>
+						<tr v-for="(item,index) in allMoneyMaps">
+							<td>{{ index + 1 }}</td>
+							<td @click="onShowFormula(item.eachSameBackMoney_formula, $event)">{{ item.eachSameBackMoney.toFixed(2) }}</td>
+							<td @click="onShowFormula(item.currentInterestMoney_formula, $event)">{{ item.currentInterestMoney.toFixed(2) }}</td>
+							<td @click="onShowFormula(item.currentMoneyCount_formula, $event)">{{ item.currentMoneyCount.toFixed(2) }}</td>
+							<td @click="onShowFormula(item.surplusCurrentMoney_formula, $event)">{{ item.surplusCurrentMoney.toFixed(2) }}</td>
+						</tr>
+					</tbody>
+					
+					<tfoot>
+						<tr>
+							<td>合计</td>
+							<td class="red-color">{{ amountCountFun('eachSameBackMoney') }}</td>
+							<td class="red-color">{{ amountCountFun('currentInterestMoney') }}</td>
+							<td class="red-color">{{ amountCountFun('currentMoneyCount') }}</td>
+							<td>/</td>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+		</div>
+	</body>
+	
+	<script src="../static/js/accounting.min.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	
+	<script type="text/javascript" src="./rate-base.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./loan-rate-compute.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./deposit-rate-compute.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[
+				$rateBaseMinxin,
+				$loanRateComputeMinxin,
+				$depositRateComputeMinxin
+			],
+			data() {
+				return {
+					form:{
+						amountType: 'LOAN', // 资金方式【存款：DEPOSIT、贷款：LOAN】
+						
+						choiceAmount: 50000, // 存贷款金额
+						depositType: 'ACTIVE', // 存款类型
+						loanType: 'DEBX', // 贷款类型
+						
+						rateSize: 8.64, // 利率大小
+						rateUnit: 'YEAR', // 利率单位
+						
+						cycleSize: 12, // 周期大小
+						cycleUnit: 'MONTH', // 周期单位
+						
+						repayAmount: '', // 反推利率
+					},
+					
+					arrays:{
+						// 存款类型
+						depositTypeList:[
+							{ value:'UNACTIVE', text:'定期存款' },
+							{ value:'ACTIVE', text:'活期存款' },
+						],
+						// 贷款类型
+						loanTypeList:[
+							{ value:'DEBJ', text:'等额本金' },
+							{ value:'DEBX', text:'等额本息' },
+						],
+						// 存贷利率周期单位
+						rateUnitList:[
+							{ value:'YEAR', text:'年' },
+							{ value:'MONTH', text:'月' },
+						],
+						// 存贷期限周期单位
+						cycleUnitList:[
+							{ value:'YEAR', text:'年' },
+							{ value:'MONTH', text:'月' },
+						]
+					}
+				}
+			},
+			computed:{
+				returnAmoutType:function() {
+					return this.form.amountType == 'DEPOSIT' ? '存' : '贷';
+				},
+				cycleUnitFormat:function() {
+					for(var item of this.arrays.cycleUnitList) {
+						if(this.form.cycleUnit == item.value) {
+							return item.text;
+						}
+					}
+				}
+			},
+			mounted:function() {
+				Vue.nextTick(function() {
+					document.getElementById("mask-loading").remove();
+					document.getElementById("app").style.overflow = 'initial';
+				});
+				
+				this.initChangeCompute();
+			},
+			methods:{
+				initChangeCompute() {
+					if(this.form.rateSize <= 0 || !this.form.rateSize) {
+						this.allMoneyMaps = [];
+						return;
+					}
+					
+					switch (this.form.amountType){
+						case 'LOAN': // 贷款
+							this.initLoanEntry();
+							break;
+						case 'DEPOSIT': // 存款
+							this.initDepositEntry();
+						default:
+							break;
+					}
+				},
+				/**
+				 * 格式化金额
+				 */
+				formatMoney:function(money, unit) {
+					return window.accounting.formatMoney(money, { symbol: unit === false ? '' : '¥' })
+				},
+			}
+		})
+	</script>
+</html>
