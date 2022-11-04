@@ -93,9 +93,9 @@
 				<span>&emsp;成交量：</span>
 				<input type="number" v-model="uad.vol" placeholder="请输入成交股数" />
 				
-				<span>&emsp;原始成交额：{{ (uad.openingPrice * uad.vol).toFixed(2) }} REM</span>
+				<span>&emsp;原始成交额：{{ formatMoney(uad.openingPrice * uad.vol) }}</span>
 				
-				<span>&emsp;收益值：{{ profitCompute }} REM</span>
+				<span>&emsp;收益值：{{ formatMoney(profitCompute) }}</span>
 			</div>
 			
 			<!-- 平均值计算 -->
@@ -143,6 +143,7 @@
 		</div>
 	</body>
 	
+	<script src="../static/js/accounting.min.js" type="text/javascript" charset="utf-8"></script>
 	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../stockCommon.minxin.js" charset="utf-8"></script>
@@ -284,7 +285,13 @@
 						this.uad.rangeRatio = -Math.abs(this.uad.rangeRatio);
 						return;
 					}
-				}
+				},
+				/**
+				 * 格式化金额
+				 */
+				formatMoney:function(money) {
+					return window.accounting.formatMoney(money, { symbol: '¥' })
+				},
 			}
 		})
 	</script>
