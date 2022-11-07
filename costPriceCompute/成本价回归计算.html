@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>成本价回归计算</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style>
+		.cost-wrap {position: relative !important;}
+		.describe {transform: scale(0.85);transform-origin: left top;line-height: 25px;color: rgba(255,167,0);}
+	</style>
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 全局值 -->
+			<div class="diff">
+				<h2 style="color: white;">全局值设定：</h2>
+				
+				<div class="box">
+					<span>初始成本：</span>
+					<input type="number" v-model="form.openingPrice" />
+					
+					<span>&emsp;市场价：</span>
+					<input type="number" v-model="form.closingPrice" />
+					
+					<span>&emsp;持有股数：</span>
+					<input type="number" v-model="form.vol" />
+				</div>
+			</div>
+			
+			<!-- 包含手续费 -->
+			<div class="diff">
+				<h2 style="color: white;">包含手续费：</h2>
+				<span>佣金：</span>
+				<input type="number" v-model="form.commissionRate" style="width: 80px;" placeholder="请输入佣金" /> %
+				
+				<span>&emsp;印花税：{{ form.stampDuty }}%</span>
+				
+				<span>&emsp;过 户 费：/</span>
+				
+				<ol class="describe">
+					<li>佣金：双边收取，按照成交金额进行结算，不足5元按照 “5元” 收取</li>
+					<li>印花税：单边收取，固定为卖出成交金额的 “千分之一”</li>
+					<li>过户费：双边收取，按照成交金额的 “千分之0.1” 收取，（2022年4月29日起，将股票交易过户费总体下调50%，即原来是万分之二），仅上海市场收取</li>
+				</ol>
+			</div>
+			
+			<!-- 成本转化计算 -->
+			<div class="diff">
+				<h2>成本转化计算</h2>
+				
+				<div class="box">
+					<span>拟卖出股数：</span>
+					<input type="number" v-model="form.sellVol"  />
+					
+					<span>&emsp;拟卖出价格：</span>
+					<input type="number" v-model="form.sellPrice"  />
+					
+					<span>&emsp;13.392</span>
+					
+					<br/><br/>
+					<span>拟买入价格：</span>
+					<input type="number" v-model="form.buyPrice" disabled />
+					
+					<span>&emsp;拟买入股数：</span>
+					<input type="number" v-model="form.buyVol" disabled/>
+					
+					<ol class="describe">
+						<li>股票的成本价格包括买入成本，交易费用，即成本价 = 股票买入成本 + 交易费用；</li>
+						<li>股票卖出成本价计算公式：成本 = （成交金额 + 手续费 - 平仓卖出金额）/ 剩余股票的数量；</li>
+					</ol>
+				</div>
+			</div>
+			
+			{
+				国投中鲁
+				[11.54]
+				11.545 √
+			}
+			
+			{
+				新坐标
+				[18.82 - 100]
+				[18.9 - 400]
+				18.903 √
+			}	
+			
+		</div>
+	</body>
+	
+	<script src="../static/js/accounting.min.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			data() {
+				return {
+					form:{
+						openingPrice: 11.54, // 初始化股票买入成本价
+						closingPrice: 0, // 市场价
+						vol: 1000, // 持有股数, 成交量
+						
+						commissionRate: 0.025, // 佣金率
+						stampDuty: 0.1, // 印花税
+						transferFee: 0.01, // 过户费
+						
+						sellVol: 200, // 拟卖出股数
+						sellPrice: 75.06, // 拟卖出价格
+						
+						buyPrice: 0, // 拟买入价格
+						buyVol: 0, // 拟买入股数
+						
+						
+					},
+				}
+			},
+			computed:{
+			},
+			mounted:function() {
+				let _this = this;
+				Vue.nextTick(function() {
+					document.getElementById("mask-loading").remove();
+					document.getElementById("app").style.overflow = 'initial';
+				});
+				
+				this.computeCostPrice();
+			},
+			methods:{
+				// 计算成本
+				computeCostPrice:function() {
+					let form = this.form;
+					
+					// 初始买入金额
+					var initBuyAmount = form.openingPrice * form.vol;
+					// console.log(initBuyAmount)
+					
+					// 买入佣金费用
+					var buyCommission = initBuyAmount * form.commissionRate / 100;
+					buyCommission = buyCommission > 5 ? buyCommission : 5;
+					
+					// 拟卖出金额 = 拟卖出股数 * 拟卖出价格
+					// var sellAmount = form.sellVol * form.sellPrice;
+					// console.log(sellAmount)
+					
+					// 卖出佣金费用
+					// var sellCommission = sellAmount * form.commissionRate / 100;
+					// sellCommission = sellCommission > 5 ? sellCommission : 5;
+					
+					// 印花税费用
+					// var stampDuty = sellAmount * form.stampDuty / 100;
+					// console.log(sellAmount)
+					
+					// 手续费总和
+					// var allCommissionCost = buyCommission + sellCommission + stampDuty;
+					
+					// var costPrice = (initBuyAmount + allCommissionCost - sellAmount) / (form.vol - form.sellVol)
+					// console.log(allCommissionCost)
+					
+					var costPrice = (initBuyAmount + buyCommission) / form.vol;
+					console.log(costPrice)
+				},
+			}
+		})
+	</script>
+</html>

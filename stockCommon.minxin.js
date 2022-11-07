@@ -7,7 +7,8 @@ var $commonMinxin = {
 				name:'', // 个股名称
 				code:'', // 个股代码
 				pinyin:'', // 个股拼音
-				isRequest: false,
+				
+				isRequest: false, // 标志: 防止多次触发同类请求字段
 			},
 			
 			globalUrl:{
@@ -48,7 +49,6 @@ var $commonMinxin = {
 	},
 	methods:{
 		reset:function() {
-			console.log('Reset.....')
 			this.stock.isRequest = false;
 		},
 		/**

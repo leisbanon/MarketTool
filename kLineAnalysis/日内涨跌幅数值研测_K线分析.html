@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>日内涨跌幅数值研测（K线分析）</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style type="text/css">
+		/* #app { margin-left: 28px; } */
+		.data-diff {margin-bottom: 0px;height: 45px;line-height: 45px;}
+		.class-content-wrapper {position: relative;display: flex;}
+		
+		.title {font-size: 20px;margin-bottom: 0px;}
+		
+		/* 大括号 */
+		.brackets-wrapper {position: relative;width: 80px;display: flex;justify-content: center;margin-left: 28px;transform: scale(0.9);}
+		.brackets-wrapper:before, .brackets-wrapper::after, .brackets-box:before,.brackets-box::after { border-width: 2px !important;color: #DDD;}
+		.brackets-wrapper:before {content: '';border-right: solid;border-top-right-radius: 20px;position: absolute;top: 10px;left: calc(50% - 20px);height: 25px;width: 20px;}
+		.brackets-wrapper::after {content: '';border-right: solid;position: absolute;bottom: 10px;left: calc(50% - 20px);height: 25px;width: 20px;border-bottom-right-radius: 20px;}
+		.brackets-box:before {content: '';border-left: solid;border-bottom-left-radius: 28px;position: absolute;top: 30px;height: calc(50% - 30px);width: 18px;}
+		.brackets-box::after {content: '';border-left: solid;border-top-left-radius: 28px;position: absolute;bottom: 30px;height: calc(50% - 30px);width: 18px;}
+		
+		.count-wrapper ul { position: relative !important;top:12px; }
+		.count-wrapper ul li span{ cursor: initial !important;}
+		.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 33px 0;}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 全局值 -->
+			<div class="diff">
+				<h2 style="color: white;width: 410px;">全局值设定：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
+				<div class="box">
+					<span>* 股票代码：</span>
+					<input type="text" v-model="form.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" @change="reset"/>
+					
+					<button type="button" @click="getStockInfo" style="margin-left: 18px;">查询并计算</button>
+				</div><br/>
+				
+				<div class="box">
+					<span>间隔交易日：</span>
+					<input type="number" v-model="form.days" placeholder="指定间隔的天数" @input="onDayChange" @keyup="onKeyUps" />
+					
+					<span>&emsp;开始时间：</span>
+					<input type="date" v-model="form.beginTime" placeholder="请输入开始时间" @change="onDateChange" />
+					
+					<span>&emsp;* 结束时间：</span>
+					<input type="date" v-model="form.endTime" placeholder="请输入结束时间" />
+				</div>
+			</div>
+			
+			<!-- 日内涨跌幅数值研测 -->
+			<div class="diff" id="102">
+				<h2 style="color: white;">日内涨跌幅数值研测：</h2>
+				<div v-for="(key, index) in Object.keys(dataRuleGroup)" :key="key">
+					<div class="title red-color" v-if="key == 'hollowLines'">『统计日内上涨的数据队列』</div>
+					<div class="title green-color" v-if="key == 'solidLines'">『统计日内下跌的数据队列』</div>
+					
+					<div class="class-content-wrapper" v-if="dataRuleGroup[key].length > 0">
+						<div>
+							<div class="data-diff" v-for="(day,index) in dataRuleGroup[key]" :key="index">
+								<div  class="data-column text" style="display: inline-flex;">
+									<div>【{{ Math.abs(index - dataRuleGroup[key].length) }}】星期 {{ window.moment(day.date).format('E') }}</div>
+								</div>
+								
+								<span>&emsp;日期：{{ window.moment(day.date).format('MM-DD') }}</span>
+								
+								<span>&emsp;收盘价：{{ day.closePrice }}</span>
+								
+								<span>&emsp;收盘{{ formatRenderText(key) }}：<span :class="key == 'hollowLines' ? 'red-color' : 'green-color'">{{ day.diffRate }}%</span></span>
+								
+								<span>&emsp;当日最高{{ formatRenderText(key) }}：{{ day.maxDiffRate }}%</span>
+							</div>
+						</div>
+						
+						<div v-if="dataRuleGroup['hollowLines'].length > 0" class="brackets-wrapper"><div class="brackets-box"></div></div>
+						
+						<!-- 统计 -->
+						<div class="count-wrapper orange-color">
+							<ul>
+								<li>
+									<span>日内收盘{{ formatRenderText(key) }}（Max）：</span>
+									<span :class="key == 'hollowLines' ? 'red-color' : 'green-color'">{{ dayDiffRateCommon(key, 'max', 'diffRate') }}%</span>
+								</li>
+								
+								
+								<li>
+									<span>日内收盘{{ formatRenderText(key) }}（Min）：</span>
+									<span :class="key == 'hollowLines' ? 'red-color' : 'green-color'">{{ dayDiffRateCommon(key, 'min', 'diffRate') }}%</span>
+								</li>
+								
+								<li>
+									<span>日内收盘{{ formatRenderText(key) }}均值（Average）：</span>
+									<span :class="key == 'hollowLines' ? 'red-color' : 'green-color'">{{ dayDiffAverageRateCommon(key, 'diffRate') }}%</span>
+								</li>
+								
+								<li style="margin-top: 20px;">
+									<span>日内最高{{ formatRenderText(key) }}（Max）：</span>
+									<span :class="key == 'hollowLines' ? 'red-color' : 'green-color'">{{ dayDiffRateCommon(key, 'max', 'maxDiffRate') }}%</span>
+								</li>
+								
+								<li>
+									<span>日内最高{{ formatRenderText(key) }}（Min）：</span>
+									<span :class="key == 'hollowLines' ? 'red-color' : 'green-color'">{{ dayDiffRateCommon(key, 'min', 'maxDiffRate') }}%</span>
+								</li>
+								
+								<li>
+									<span>日内最高{{ formatRenderText(key) }}均值（Average）：</span>
+									<span :class="key == 'hollowLines' ? 'red-color' : 'green-color'">{{ dayDiffAverageRateCommon(key, 'maxDiffRate') }}%</span>
+								</li>
+							</ul>
+						</div>
+					</div>
+				
+					<div class="middle-line" v-if="index == 0"></div>
+				</div>
+			</div>
+		</div>
+	</body>
+	
+	<script type="text/javascript" src="../static/js/axios.min.js"></script>
+	<script type="text/javascript" src="../static/js/moment.js"></script>
+	<script type="text/javascript" src="../stockCommon.minxin.js"></script>
+	
+	<script type="text/javascript" src="./kLineAnalysis.js"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[
+				$commonMinxin,
+				$kLineAnalysis
+			],
+			data() {
+				return {
+					form:{
+						code: '',
+						days:5, // 指定查询的天数
+						beginTime:'', // 开始时间
+						endTime:'', // 结束时间
+					},
+					
+					dayLines: [], // 个股日线历史数据结果集
+					
+					dataRuleGroup:{ // 数据队列规则组
+						hollowLines: [], // 阳线数据列
+						solidLines: [], // 阴线数据列
+					}
+				}
+			},
+			computed: {
+			},
+			mounted:function() {
+				this.form.endTime = moment().format('YYYY-MM-DD'); 
+				this.form.beginTime = moment().subtract(this.form.days, 'days').format('YYYY-MM-DD');
+			},
+			methods:{
+				// 查询个股基本信息
+				getStockInfo:function(callback) {
+					var _this = this;
+					
+					var stock = this.form;
+					if(!stock.endTime || (!stock.days && !stock.beginTime)) {
+						alert('全局值设定参数不完整');
+						return;
+					}
+					
+					this.fetchStockInfo(this.form.code,function(data) {
+						Object.assign(_this.stock, data)
+						_this.stock.isRequest = true;
+						
+						// 查询个股历史行情数据
+						_this.stockHistoryAction(data.code)
+					})
+				},
+				// 查询个股历史日线数据
+				stockHistoryAction:function(code) {
+					var _this = this;
+					var params = {
+						code: code,
+						beginTime: this.form.beginTime,
+						endTime: this.form.endTime
+					}
+					
+					if(this.form.days) {
+						params.beginTime = moment(this.form.endTime).subtract(this.form.days * 3, 'days').format('YYYY-MM-DD');
+					}
+					
+					this.fetchStockHistory(params.code,params.beginTime, params.endTime, function(list) {
+						if(JSON.stringify(list) != JSON.stringify(_this.dayLines)) {
+							_this.dayLines = list;
+							_this.datasGroupHandle();
+						}
+					})
+				},
+				// 执行数组组操作
+				datasGroupHandle:function() {
+					// clear data array
+					for(var key of Object.keys(this.dataRuleGroup)) {
+						this.dataRuleGroup[key] = [];
+					}
+					
+					var isHollowRich = false;
+					var isSolidRich = false;
+					
+					var dayLines = this.dayLines;
+					for(var i = 0;i < dayLines.length;i++) {
+						if(dayLines[i + 1]) {
+							var value = dayLines[i];
+							var date = value.date; // 日期
+							var diffRate = value.diff_rate; // 涨跌幅
+							var closePrice = value.close_price; // 成本价
+							var minPrice = value.min_price; // 最低价
+							var maxPrice = value.max_price; // 最高价
+							
+							var object = {
+								date: date,
+								diffRate: diffRate,
+								closePrice: closePrice,
+								minPrice: minPrice,
+								maxPrice: maxPrice,
+							}
+							
+							// 成本价：计算为上一天的收盘价
+							var _yesterClosePrice = dayLines[i + 1].close_price; 
+							var _maxDiffRate = 0;
+							
+							// 填充阳线数据列
+							if(Number(value.diff_money) > 0 && !isHollowRich) {
+								_maxDiffRate = ((maxPrice - _yesterClosePrice) / _yesterClosePrice * 100).toFixed(2);
+								object['maxDiffRate'] = _maxDiffRate;
+								this.dataRuleGroup.hollowLines.push(object);
+								
+								if(this.dataRuleGroup.hollowLines.length == this.form.days) { isHollowRich = true };
+							}
+							
+							// 填充阴线数据列
+							if(Number(value.diff_money) <=0 && !isSolidRich) {
+								_maxDiffRate = ((minPrice - _yesterClosePrice) / _yesterClosePrice * 100).toFixed(2);
+								object['maxDiffRate'] = _maxDiffRate;
+								this.dataRuleGroup.solidLines.push(object);
+								
+								if(this.dataRuleGroup.solidLines.length == this.form.days) { isSolidRich = true };
+							}
+							
+							if(isHollowRich && isSolidRich) { break }
+						}
+					}
+					console.log('dataRuleGroup => ' + JSON.stringify(this.dataRuleGroup))
+				},
+				// 开始时间变动时触发
+				onDateChange:function(e) {
+					var _start = moment(e.target.value);
+					var _end = moment(this.form.endTime);
+					this.form.days = _end.diff(_start, 'day');
+				},
+				// 指定查询天数变化时
+				onDayChange:function(e) {
+					this.form.beginTime = moment(this.form.endTime).subtract(e.target.value, 'days').format('YYYY-MM-DD');
+					this.reset()
+				},
+				/**
+				 * 按键监听
+				 */
+				onKeyUps:function(event) {
+					if(event.keyCode == 13 && !this.stock.isRequest) {
+						this.getStockInfo()
+					}
+				},
+			}
+		})
+	</script>
+</html>

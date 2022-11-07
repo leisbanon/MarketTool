@@ -39,7 +39,7 @@
 					<input type="number" v-model="uad.days" placeholder="指定间隔的天数" @input="onDayChange" @keyup="onKeyUps" />
 					
 					<span>&emsp;开始时间：</span>
-					<input type="date" v-model="uad.beginTime" placeholder="请输入开始时间" @change="uad.days = ''" />
+					<input type="date" v-model="uad.beginTime" placeholder="请输入开始时间" @change="onDateChange" />
 					
 					<span>&emsp;* 结束时间：</span>
 					<input type="date" v-model="uad.endTime" placeholder="请输入结束时间" />
@@ -110,7 +110,7 @@
 					uad:{
 						code:'', // 股票代码
 						name:'', // 股票名称
-						days:'5', // 指定查询的天数
+						days:5, // 指定查询的天数
 						beginTime:'', // 开始时间
 						endTime:'', // 结束时间
 					},
@@ -142,14 +142,23 @@
 				}
 			},
 			mounted:function() {
+				this.uad.beginTime = moment().subtract(this.uad.day).format('YYYY-MM-DD');
 				this.uad.endTime = moment().format('YYYY-MM-DD'); 
 			},
 			methods:{
 				/**
+				 * 开始时间变动时触发
+				 */
+				onDateChange:function(e) {
+					var _start = moment(e.target.value);
+					var _end = moment(this.uad.endTime);
+					this.uad.days = _end.diff(_start, 'day');
+				},
+				/**
 				 * 指定查询天数变化时
 				 */
-				onDayChange(value) {
-					this.uad.beginTime = '';
+				onDayChange:function(e) {
+					this.uad.beginTime = moment(this.uad.endTime).subtract(e.target.value, 'days').format('YYYY-MM-DD');
 					this.reset()
 				},
 				/**
@@ -232,7 +241,7 @@
 					for(var i = 0;i <= dayLines.length;i++) {
 						if(dayLines[i + 1]) {
 							var day = dayLines[i];
-							var costPrice = dayLines[i + 1].close_price; // 成本价
+							var costPrice = dayLines[i + 1].close_price; // 成本低：计算为上一天的收盘价
 							var date = dayLines[i + 1].date; // 日期
 							var minPrice = day.min_price; // 最低价
 							var maxPrice = day.max_price; // 最高价

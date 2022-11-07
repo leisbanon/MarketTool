@@ -90,12 +90,12 @@
 				<span>&emsp;市场价：</span>
 				<input type="number" v-model="uad.closingPrice" placeholder="请输入卖出价" />
 				
-				<span>&emsp;成交量：</span>
+				<span>&emsp;成交量（手）：</span>
 				<input type="number" v-model="uad.vol" placeholder="请输入成交股数" />
 				
-				<span>&emsp;原始成交额：{{ formatMoney(uad.openingPrice * uad.vol) }}</span>
+				<span>&emsp;原始成交额：{{ formatMoney(uad.openingPrice * uad.vol * 100) }}</span>
 				
-				<span>&emsp;收益值：{{ formatMoney(profitCompute) }}</span>
+				<span>&emsp;收益额：{{ formatMoney(profitCompute) }}</span>
 			</div>
 			
 			<!-- 平均值计算 -->
@@ -183,9 +183,9 @@
 					
 					if(!_openingPrice || !_closingPrice || !_vol) { return };
 					
-					var buyPrice = _openingPrice * _vol;
-					var putPrice = _closingPrice * _vol;
-					return (putPrice - buyPrice).toFixed(2);
+					var buyPrice = _openingPrice * _vol * 100;
+					var putPrice = _closingPrice * _vol * 100;
+					return putPrice - buyPrice;
 				},
 				/**
 				 * 止损位计算

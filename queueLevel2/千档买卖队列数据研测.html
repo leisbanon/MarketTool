@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title>千档买卖队列数据研测</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	<style type="text/css">
+		#app { margin-left: 28px; }
+		.input-label {float: left;writing-mode: vertical-rl;margin-right: 12px;}
+		._textarea {outline: none;resize: none;border-radius: 6px;padding: 7px;}
+		._textarea::-webkit-scrollbar {width: 7px;background-color: #F1F1F1;border-radius: 6px;}
+		._textarea::-webkit-scrollbar-thumb {background-color: #C1C1C1;border: 1px solid #777;cursor: pointer;}
+		
+		.content-wrapper {display: flex;width: 100%;}
+		.content-wrapper .content-box {margin-right: 40px;}
+		.chart-wrapper {display: flex;flex: 1;margin-right: 0 !important;background-color: white;border-radius: 6px;position: relative;}
+		.chart-wrapper .chart-box {height: 405px;flex: 1;}
+		
+		.footer-lines {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.65);margin-top: 39px;}
+		.handles { margin: 18px 0 18px 30px; }
+		.handles button { margin-right: 25px;color: #6495ED !important; }
+		
+		#importFile {position: absolute;left: 0;top: 0;bottom: 0;width: 100% !important;opacity: 0;}
+		.file-title {color: rgba(153,153,153,0.8);position: absolute;left: 50%;transform: translateX(-50%);font-size: 20px;top: 8px;}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 千档买卖队列数据研测 -->
+			<div class="diff">
+				<h2 style="color: white;">千档买卖队列数据研测：</h2>
+				
+				<div class="content-wrapper">
+					<div class="content-box">
+						<span class="input-label orange-color">千档卖盘委托价格：</span>
+						<textarea class="_textarea" v-model="form.queueData" cols="11" rows="26"></textarea>
+					</div>
+					
+					<div class="content-box chart-wrapper">
+						<div class="file-title">{{ file.filename || (stock.name + ' ' + stock.code) }}</div>
+						
+						<!-- 卖盘千档视图可视化图表 -->
+						<div id="sell-plate-chart" class="chart-box"></div>
+						<!-- 买盘千档视图可视化图表 -->
+						<div id="buy-plate-chart" class="chart-box"></div>
+					</div>
+				</div>
+				
+				<div class="footer-lines"></div>
+				<div class="handles">
+					<button @click="analysis">Analysis</button>
+					
+					<button @click="onExport">导出数据到 Txt 文件</button>
+					
+					<button type="button">
+						<span>选择 Txt 文件导入数据</span>
+						<input @change="onImport" id="importFile" name="importFile" type="file"/>
+					</button>
+					
+					<button @click="onClearCharts">Clear</button>
+					
+					<button @click="onResetCharts">View Resize</button>
+					
+					<button @click="queueRobotAlter">队列计算器</button>
+				</div>
+			</div>
+		</div>
+	</body>
+	
+	<script src="../static/js/echarts.min.js" type="text/javascript" charset="utf-8"></script>
+	<script src="../static/js/accounting.min.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/FileSaver.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../stockCommon.minxin.js" charset="utf-8"></script>
+	
+	<script type="text/javascript" src="./level2-data-analysis2.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[
+				$commonMinxin,
+				$level2DataAnalysis2Minxin
+			],
+			data() {
+				return {
+					form: {
+						queueData: '[65,70,"002919","2022-11-07"]\n32.42\n32.40\n32.32\n32.30\n32.00\n31.98\n31.80\n31.48\n31.47\n31.42\n31.38\n31.36\n31.25\n31.12\n31.10\n31.02\n31.00\n30.98\n30.95\n30.89\n30.80\n30.67\n30.65\n30.63\n30.60\n30.58\n30.50\n30.49\n30.44\n30.40\n30.37\n30.32\n30.30\n30.25\n30.23\n30.20\n30.19\n30.12\n30.10\n30.07\n30.03\n30.00\n29.99\n29.98\n29.95\n29.92\n29.88\n29.85\n29.83\n29.80\n29.79\n29.78\n29.69\n29.68\n29.67\n29.66\n29.65\n29.60\n29.59\n29.58\n29.57\n29.56\n29.55\n29.54\n29.53\n29.38\n29.37\n29.34\n29.30\n29.25\n29.20\n29.11\n29.10\n29.02\n29.01\n29.00\n28.96\n28.95\n28.94\n28.93\n28.91\n28.90\n28.86\n28.80\n28.79\n28.77\n28.75\n28.73\n28.70\n28.68\n28.67\n28.66\n28.65\n28.64\n28.61\n28.60\n28.58\n28.56\n28.53\n28.50\n28.47\n28.45\n28.43\n28.40\n28.38\n28.33\n28.30\n28.27\n28.24\n28.23\n28.22\n28.21\n28.20\n28.15\n28.10\n28.08\n28.06\n28.05\n28.03\n28.02\n28.00\n27.90\n27.80\n27.68\n27.61\n27.51\n27.50\n27.25\n26.73\n26.70\n26.67\n26.64\n26.61\n26.55\n26.52\n114\n32\n24\n1\n77\n5\n4\n5\n6\n20\n100\n2\n4\n50\n91\n50\n187\n3\n1\n10\n2\n20\n4\n5\n5\n22\n16\n4\n7\n30\n2\n1\n127\n10\n5\n48\n4\n5\n1\n10\n1\n173\n48\n8\n4\n2\n12\n15\n3\n4\n2\n50\n14\n54\n29\n42\n6\n54\n47\n12\n2\n14\n3\n3\n8\n312\n50\n50\n12\n7\n10\n4\n10\n22\n50\n281\n5\n33\n3\n6\n24\n100\n37\n42\n6\n10\n10\n6\n15\n6\n20\n20\n2\n12\n24\n157\n6\n1\n30\n13\n3\n2\n1\n2\n11\n5\n1\n20\n84\n5\n5\n3\n137\n8\n102\n11\n30\n10\n17\n1\n139\n1\n102\n1\n5\n30\n205\n1\n27\n52\n35\n4\n78\n91\n412',
+					},
+					
+					file:{
+						filename: '',
+					},
+					
+					count:{
+						sellPriceNo1: 0, // 千档卖盘价一
+						buyPriceNo1: 0, // 千档买盘价一
+						
+						sellPlateVolCount: 0, // 卖盘委托总成交量
+						sellPlateAmountCount: 0, // 卖盘委托总成交额
+						
+						buyPlateVolCount: 0, // 买盘委托总成交量
+						buyPlateAmountCount: 0, // 买盘委托总成交额
+					},
+					
+					sellPlateChart: null,
+					buyPlateChart: null,
+				}
+			},
+			mounted:function() {
+				this.sellPlateChart = echarts.init(document.getElementById('sell-plate-chart'));
+				this.buyPlateChart = echarts.init(document.getElementById('buy-plate-chart'));
+				
+				var _this = this;
+				document.body.addEventListener('keydown', function(e) {
+					if(e.keyCode == 80) {
+						_this.queueRobotAlter();
+					}
+				})
+				this.initExecute();
+			},
+			methods:{
+				analysis:function() {
+					this.onClearData();
+					
+					this.initExecute();
+				},
+				// 加载图表
+				loadEchart:function(id, data) {
+					let _this = this;
+					var baseOption = {
+						xAxis: {
+							data: data.priceQueue,
+							name:'委托价',
+							nameLocation: '委托价',
+							nameLocation: 'start',
+							nameRotate: 45,
+							type: 'category',
+						},
+						yAxis: {
+							name: '成交量',
+							type: 'value',
+							nameLocation: 'end',
+							nameRotate: 45,
+							min: 1,
+							max: 'dataMax',
+						},
+						grid: {
+							width: 'auto',
+							left: '12%',
+							right: '6%',
+							bottom: 60,
+						},
+						legend: {
+							show: true,
+							type: 'plain',
+							top: 10,
+							formatter:function() {
+								if(id == 'sell-plate-chart') {
+									return '千档委卖队列'
+								}else {
+									return '千档委买队列'
+								}
+							}
+						},
+						tooltip:{
+							show: true,
+							trigger: 'axis',
+							// alwaysShowContent: true,
+							hideDelay: 500,
+							axisPointer:{
+								type: 'cross', // 十字准星指示器
+							},
+							formatter: function(params, ticket) {
+								var div = document.createElement('div');
+								
+								var formatAmount = _this.formatMoney(params[0].axisValue * params[0].value * 100);
+								var html = '<span style="font-size: 15px;color: #555555;">Analysis</span><ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #6495ED;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">委托成交额</span></li><li style="font-size: 14px;margin: 0 !important;font-weight: bold;font-style: italic;flex: 1;">'+formatAmount+'（'+params[0].value+'手）</li></ul>';
+								
+								// 委买卖价
+								var title = (id == 'sell-plate-chart') ? '委卖价: ': '委买价: ';
+								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: '+params[0].color+';border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">'+title+'</span></li><li style="font-size: 14px;margin: 0 !important;font-weight: bold;font-style: italic;flex: 1;">'+params[0].axisValue+'</li></ul>';
+								
+								// 涨跌比
+								var _sybmolPrice = _this.stock.openPrice ? _this.stock.openPrice : '';
+								!_sybmolPrice ? _sybmolPrice = ((id == 'sell-plate-chart') ? _this.count.sellPriceNo1 : _this.count.buyPriceNo1) : '';
+								// console.log('_sybmolPrice => ' + _sybmolPrice);
+								var _rateCompute = (Number(params[0].axisValue) - _sybmolPrice) / _sybmolPrice * 100;
+								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: rgb(255,167,0);border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">涨跌比</span></li><li style="font-size: 14px;margin: 0 !important;font-weight: bold;font-style: italic;flex: 1;">'+_rateCompute.toFixed(2)+'%</li></ul>';
+								
+								// 当前委托队列
+								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #6A5ACD;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">当前委托队列</span></li><li style="font-size: 14px;margin: 0 !important;flex: 1;">'+(params[0].dataIndex + 1)+'</li></ul>';
+								
+								// 拟开盘价
+								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #A9A9A9;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">拟开盘价</span></li><li style="font-size: 14px;margin: 0 !important;font-style: italic;flex: 1;">'+_sybmolPrice+'</li></ul>';
+								
+								// 总量显示
+								var _volText = (id == 'sell-plate-chart') ? '委卖总量' : '委买总量';
+								var _volNumber = (id == 'sell-plate-chart') ? _this.count.sellPlateVolCount : _this.count.buyPlateVolCount;
+								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #A9A9A9;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">'+_volText+'</span></li><li style="font-size: 14px;margin: 0 !important;flex: 1;">'+_volNumber+'</li></ul>';
+								
+								// 总额显示
+								var _amountText = (id == 'sell-plate-chart') ? '委卖总额' : '委买总额';
+								var _amountNumber = (id == 'sell-plate-chart') ? _this.count.sellPlateAmountCount : _this.count.buyPlateAmountCount;
+								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #A9A9A9;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">'+_amountText+'</span></li><li style="font-size: 14px;margin: 0 !important;flex: 1;">'+_this.formatMoney(_amountNumber * 100)+'</li></ul>';
+								
+								div.innerHTML = html;
+								return div;
+							}
+						},
+						dataZoom: [
+							{ type: 'inside',start: 0,end: 100 },
+							{ type: 'slider',start: 0,end: 100,moveHandleSize: 8,height:20,bottom: 15, },
+						],
+						series: [
+							{ name:'成交量', data: data.volQueue, type: 'line', smooth: false },
+						],
+						color: '#00FF60',
+					};
+					
+					// 动态样式调试
+					if(id == 'sell-plate-chart') {
+						this.sellPlateChart.setOption(baseOption);
+					} 
+					if(id == 'buy-plate-chart') {
+						baseOption.color = 'rgb(255, 69, 0)';
+						this.buyPlateChart.setOption(baseOption);
+					}
+				},
+				// 导入
+				onImport:function(e) {
+					var _this = this;
+					var file = e.target.files[0];
+					
+					var readerReport = new FileReader();
+					readerReport.readAsText(file, "UTF-8");
+					readerReport.onload = function (e) {
+						_this.onClearData();
+						
+						_this.form.queueData = readerReport.result;
+						_this.file.filename = file.name;
+						_this.initExecute();
+					}
+				},
+				// 导出
+				onExport:function() {
+					var day = moment().format('YYYYMMDD');
+					var filename = this.stock.name + '-' + this.stock.code + '-'+ day + '-收市千档队列';
+					
+					var isPrompt = window.prompt('请输入文件名称: ', filename);
+					if(isPrompt) {
+						var blob = new Blob([this.form.queueData], {type: "text/plain;charset=utf-8"});
+						saveAs(blob, filename + ".txt");
+					}
+				},
+				// 重置图表
+				onResetCharts() {
+					this.sellPlateChart.resize();
+					this.buyPlateChart.resize();
+				},
+				// 清除图表
+				onClearCharts:function() {
+					this.sellPlateChart.clear();
+					this.buyPlateChart.clear();
+					this.onClearData();
+				},
+				onClearData:function() {
+					for(var key of Object.keys(this.count)) { this.count[key] = '' };
+					
+					for(var key of Object.keys(this.file)) { this.file[key] = '' };
+					
+					for(var key of Object.keys(this.stock)) { this.stock[key] = '' }
+				},
+				/**
+				 * 格式化金额
+				 */
+				formatMoney:function(money) {
+					return window.accounting.formatMoney(money, { symbol: '¥' })
+				},
+				// 队列计算器
+				queueRobotAlter:function() {
+					var _prompt = window.prompt('请输入委托买卖队列长度，格式：Count-Count：','0-0');
+					if(_prompt) {
+						var data = _prompt.split('-');
+						var count = (Number(data[0]) + Number(data[1])) * 2;
+						count ? alert(count) : '';
+					}
+				}
+			}
+		})
+	</script>
+</html>
