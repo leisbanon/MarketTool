@@ -134,7 +134,7 @@ var $level2DataAnalysis2Minxin = {
 			var beginTime = moment(date).subtract(5, 'days').format('YYYY-MM-DD');
 			var endTime = moment().format('YYYY-MM-DD');
 			this.fetchStockHistory(code, beginTime, endTime, function(list) {
-				var index = moment().format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD') ? 0 : 1;
+				var index = moment().format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD') ? 1 : 0;
 				_this.stock.openPrice = list[index].close_price;
 				
 				_this.level2DataAnalysis_2();
