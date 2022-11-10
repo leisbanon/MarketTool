@@ -42,7 +42,7 @@
 					</div>
 					
 					<div class="content-box chart-wrapper">
-						<div class="file-title">{{ file.filename || (stock.name + ' ' + stock.code) }}</div>
+						<div class="file-title">{{ stock.name + ' ' + stock.code }}</div>
 						
 						<!-- 卖盘千档视图可视化图表 -->
 						<div id="sell-plate-chart" class="chart-box"></div>
@@ -98,9 +98,6 @@
 					},
 					
 					count:{
-						sellPriceNo1: 0, // 千档卖盘价一
-						buyPriceNo1: 0, // 千档买盘价一
-						
 						sellPlateVolCount: 0, // 卖盘委托总成交量
 						sellPlateAmountCount: 0, // 卖盘委托总成交额
 						
@@ -180,24 +177,21 @@
 								var div = document.createElement('div');
 								
 								var formatAmount = _this.formatMoney(params[0].axisValue * params[0].value * 100);
-								var html = '<span style="font-size: 15px;color: #555555;">Analysis</span><ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #6495ED;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">委托成交额</span></li><li style="font-size: 14px;margin: 0 !important;font-weight: bold;font-style: italic;flex: 1;">'+formatAmount+'（'+params[0].value+'手）</li></ul>';
+								var html = '<span style="font-size: 15px;color: #555555;">'+_this.stock.date+'</span><ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #6495ED;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">委托成交额</span></li><li style="font-size: 14px;margin: 0 !important;font-weight: bold;font-style: italic;flex: 1;">'+formatAmount+'（'+params[0].value+'手）</li></ul>';
 								
 								// 委买卖价
 								var title = (id == 'sell-plate-chart') ? '委卖价: ': '委买价: ';
 								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: '+params[0].color+';border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">'+title+'</span></li><li style="font-size: 14px;margin: 0 !important;font-weight: bold;font-style: italic;flex: 1;">'+params[0].axisValue+'</li></ul>';
 								
 								// 涨跌比
-								var _sybmolPrice = _this.stock.openPrice ? _this.stock.openPrice : '';
-								!_sybmolPrice ? _sybmolPrice = ((id == 'sell-plate-chart') ? _this.count.sellPriceNo1 : _this.count.buyPriceNo1) : '';
-								// console.log('_sybmolPrice => ' + _sybmolPrice);
-								var _rateCompute = (Number(params[0].axisValue) - _sybmolPrice) / _sybmolPrice * 100;
+								var _rateCompute = (Number(params[0].axisValue) - _this.stock.openPrice) / _this.stock.openPrice * 100;
 								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: rgb(255,167,0);border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">涨跌比</span></li><li style="font-size: 14px;margin: 0 !important;font-weight: bold;font-style: italic;flex: 1;">'+_rateCompute.toFixed(2)+'%</li></ul>';
 								
 								// 当前委托队列
 								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #6A5ACD;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">当前委托队列</span></li><li style="font-size: 14px;margin: 0 !important;flex: 1;">'+(params[0].dataIndex + 1)+'</li></ul>';
 								
 								// 拟开盘价
-								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #A9A9A9;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">拟开盘价</span></li><li style="font-size: 14px;margin: 0 !important;font-style: italic;flex: 1;">'+_sybmolPrice+'</li></ul>';
+								html += '<ul style="color: #555555;display: flex;list-style: none;padding: 0;margin-top: 3px;align-items: center;justify-content: space-between;position: initial;"><li style="margin: 0 24px 0 0 !important;width: 110px;"><span style="width: 9px;height: 9px;background-color: #A9A9A9;border-radius: 50%;display: inline-block;"></span><span style="font-size: 14px;margin-left: 6px;">拟开盘价</span></li><li style="font-size: 14px;margin: 0 !important;font-style: italic;flex: 1;">'+_this.stock.openPrice+'</li></ul>';
 								
 								// 总量显示
 								var _volText = (id == 'sell-plate-chart') ? '委卖总量' : '委买总量';

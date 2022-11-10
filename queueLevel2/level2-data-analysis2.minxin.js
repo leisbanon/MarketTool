@@ -5,7 +5,8 @@ var $level2DataAnalysis2Minxin = {
 			buyLevelCount: 0,
 			
 			stock: {
-				openPrice: 0, // 股票收盘价
+				openPrice: 0, // 拟股票收盘价
+				date: '', // 日期
 			},
 			
 			dataArray: [], // 数据队列格式化保集合列表
@@ -20,17 +21,22 @@ var $level2DataAnalysis2Minxin = {
 			try{
 				this.dataArray = this.form.queueData.replace(/\ /g, '').split(/\n/);
 				this.robot = JSON.parse(this.dataArray[0]);
+				
+				var column_0 = this.robot[0];
+				var column_1 = this.robot[1];
 				var code = this.robot[2];
 				var date = this.robot[3];
 				
-				if(code && date && code.length == 6) {
+				if(column_0 && column_1 && code.length == 6 && date) {
+					this.level2DataAnalysis_2();
+					
 					this.fetchCodeInfo();
 				}else {
-					this.level2DataAnalysis_2();
+					alert('首行信息数据录入无效! ');
+					
 				}
 			}catch(e){
-				console.log('数据队列录入错误! ')
-				alert('数据队列录入错误! ')
+				alert('首行信息数据录入无效! ');
 			}
 		},
 		// 千档行情数据解析二
@@ -46,25 +52,23 @@ var $level2DataAnalysis2Minxin = {
 				
 				// 卖盘价格委托队列
 				var sellPriceQueue = content.slice(0, this.sellLevelCount).reverse();
+				console.log('%c 卖盘价格委托队列 >> size：' + sellPriceQueue.length, 'color:red;font-size:14px;');
 				console.log(JSON.stringify(sellPriceQueue));
-				console.log('%c Length => ' +  sellPriceQueue.length, 'color:red;font-size:16px;');
 				
-				console.log('%c 买盘队列 >>>>>>>>>>>>>>>>>>', 'color:red;font-size:14px;');
 				// --买盘价格委托队列--
 				var buyPriceQueue = content.slice(this.sellLevelCount, sellBuyBlockLength);
+				console.log('%c 买盘价格委托队列 >> size：' + buyPriceQueue.length, 'color:red;font-size:14px;');
 				console.log(JSON.stringify(buyPriceQueue));
-				console.log('%c Length => ' +  buyPriceQueue.length, 'color:red;font-size:16px;');
 				
 				// --卖盘数量队列--
-				var sellVolQueue = content.slice(sellBuyBlockLength, sellBuyBlockLength + this.sellLevelCount).reverse();;
+				var sellVolQueue = content.slice(sellBuyBlockLength, sellBuyBlockLength + this.sellLevelCount).reverse();
+				console.log('%c 卖盘数量委托队列 >> size：' + sellVolQueue.length, 'color:red;font-size:14px;');
 				console.log(JSON.stringify(sellVolQueue));
-				console.log('%c Length => ' +  sellVolQueue.length, 'color:red;font-size:16px;');
 				
 				// --买盘数量队列--
 				var buyVolQueue = content.slice(sellBuyBlockLength + this.sellLevelCount, sellBuyBlockLength * 2);
+				console.log('%c 买盘数量委托队列 >> size：' + buyVolQueue.length, 'color:red;font-size:14px;');
 				console.log(JSON.stringify(buyVolQueue));
-				console.log('%c Length => ' +  buyVolQueue.length, 'color:red;font-size:16px;');
-				
 				
 				// 图表加载之前，检查队列数据是否准确有效
 				if(sellPriceQueue.length != sellVolQueue.length || buyPriceQueue.length != buyVolQueue.length) {
@@ -97,8 +101,8 @@ var $level2DataAnalysis2Minxin = {
 					this.count.buyPlateVolCount += Number(buyVolQueue[i]);
 				}
 				
-				this.count.sellPriceNo1 = sellPriceQueue[0];
-				this.count.buyPriceNo1 = buyPriceQueue[0];
+				this.stock.openPrice = Number((sellPriceQueue[sellPriceQueue.length - 1] / 1.1).toFixed(2));
+				this.stock.date = moment(this.robot[3]).format('YYYY-MM-DD');
 				
 				// 加载可视化图表
 				this.loadEchart('sell-plate-chart',{
@@ -119,25 +123,9 @@ var $level2DataAnalysis2Minxin = {
 			var _this = this;
 			var code = this.robot[2];
 			this.fetchStockInfo(code, function(data) {
-				Object.assign(_this.stock,data);
-				_this.getStockHistory();
-			})
-		},
-		/**
-		 * 获取个股行情数据
-		 */
-		getStockHistory:function() {
-			var _this = this;
-			var code = this.robot[2];
-			var date = this.robot[3];
-			
-			var beginTime = moment(date).subtract(5, 'days').format('YYYY-MM-DD');
-			var endTime = moment().format('YYYY-MM-DD');
-			this.fetchStockHistory(code, beginTime, endTime, function(list) {
-				var index = moment().format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD') ? 1 : 0;
-				_this.stock.openPrice = list[index].close_price;
+				Object.assign(_this.stock, data);
 				
-				_this.level2DataAnalysis_2();
+				// console.log(JSON.stringify(_this.stock))
 			})
 		},
 	}
