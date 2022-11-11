@@ -36,7 +36,7 @@ var $level2DataAnalysis2Minxin = {
 					
 				}
 			}catch(e){
-				alert('首行信息数据录入无效! ');
+				alert('数据解析失败! ');
 			}
 		},
 		// 千档行情数据解析二
@@ -85,7 +85,11 @@ var $level2DataAnalysis2Minxin = {
 				
 				// 匹配成交量队列是否存在特殊字符
 				var reg = (/[^0-9,].*/g);
-				if(reg.test(sellVolQueue.toString()) || reg.test(buyVolQueue.toString())) {
+				var sellsStr = sellVolQueue.toString();
+				var buysStr = buyVolQueue.toString();
+				if(reg.test(sellsStr) || reg.test(buysStr)) {
+					sellsStr.search(reg) ? console.error(sellsStr.substr(sellsStr.search(reg), 10)) : '';
+					buysStr.search(reg) > 0 ? console.error(buysStr.substr(buysStr.search(reg), 10)) : '';
 					alert('委托买卖盘中，其成交量队列数据校验错误，存在特殊字符!');
 					return;
 				}
