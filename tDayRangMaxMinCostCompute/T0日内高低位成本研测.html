@@ -92,7 +92,7 @@
 						<input type="number" v-model="form.dayInVol" @input="datasGroupHandle" />
 						<div></div>
 						
-						<ul class="details-count">
+						<ul class="details-count" v-if="dataGroupList.length > 0">
 							<li>收盘总赢损：<span class="red-color">{{ countCompute('0') }}</span></li>
 							<li>高低价比率（min）：<span class="red-color">{{ countCompute('1') }}%</span></li>
 							<li>高低价收益（count）：<span class="red-color">{{ countCompute('2') }}</span></li>
@@ -113,7 +113,7 @@
 							<span>最高价：{{ day.maxPrice }}</span>
 							<span>最低价：{{ day.minPrice }}</span>
 							<span>高低价比率：<span class="orange-color">{{ day._dayMaxMinRate }}%</span></span>
-							<span style="margin-right: 0;" :title="'实际收益 - 手续费 = ' + (day._dayMaxMinDiffMoney).toFixed(2) + ' - ' + (day._commissionCounts).toFixed(2)">高低价收益：<span class="red-color">{{ formatMoney(day._dayMaxMinDiffMoney - day._commissionCounts) }}</span></span>
+							<span style="margin-right: 0;cursor: help;" :title="'实际收益 - 手续费 = ' + (day._dayMaxMinDiffMoney).toFixed(2) + ' - ' + (day._commissionCounts).toFixed(2)">高低价收益：<span class="red-color">{{ formatMoney(day._dayMaxMinDiffMoney - day._commissionCounts) }}</span></span>
 						</li>
 					</ol>
 				</div>
@@ -137,14 +137,14 @@
 					isTransferFee: true, // 是否计算过户费
 					
 					form:{
-						code: '600188',
-						openPrice: 53.28, // 成本价
+						code: '',
+						openPrice: 0, // 成本价
 						closePrice: 0, // 收盘价
 						vol: 100, // 成交股数
 						dayInVol: 100, // 日内操作股数（T+0）
 						
-						days: '',
-						beginTime:'2022-09-22', // 开始时间
+						days: 3,
+						beginTime:'', // 开始时间
 						endTime:'', // 结束时间
 						
 						commissionRate: 0.025, // 佣金率
@@ -158,8 +158,7 @@
 			},
 			mounted:function() {
 				this.form.endTime = moment().format('YYYY-MM-DD'); 
-				
-				this.getStockInfo();
+				this.form.beginTime = moment().subtract(this.form.days, 'days').format('YYYY-MM-DD');
 			},
 			methods:{
 				onChange:function() {
@@ -237,7 +236,7 @@
 				// 数据组合计算操作
 				datasGroupHandle:function() {
 					// 设置收盘价
-					!this.form.closePrice ? this.form.closePrice = this.datalist[0].close_price : '';
+					this.form.closePrice = this.datalist[0].close_price;
 					
 					var _datalist = [];
 					for(var i = 0;i < this.datalist.length;i++) {
