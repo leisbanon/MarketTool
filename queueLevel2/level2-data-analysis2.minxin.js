@@ -19,6 +19,7 @@ var $level2DataAnalysis2Minxin = {
 		initExecute:function() {
 			// debugger
 			try{
+				this.errorMes = '';
 				this.dataArray = this.form.queueData.replace(/\ /g, '').split(/\n/);
 				this.robot = JSON.parse(this.dataArray[0]);
 				
@@ -88,9 +89,9 @@ var $level2DataAnalysis2Minxin = {
 				var sellsStr = sellVolQueue.toString();
 				var buysStr = buyVolQueue.toString();
 				if(reg.test(sellsStr) || reg.test(buysStr)) {
-					sellsStr.search(reg) ? console.error(sellsStr.substr(sellsStr.search(reg), 10)) : '';
-					buysStr.search(reg) > 0 ? console.error(buysStr.substr(buysStr.search(reg), 10)) : '';
-					alert('委托买卖盘中，其成交量队列数据校验错误，存在特殊字符!');
+					sellsStr.search(reg) ? this.errorMes += sellsStr.substr(sellsStr.search(reg), 10) : '';
+					buysStr.search(reg) > 0 ? this.errorMes += buysStr.substr(buysStr.search(reg), 10) : '';
+					console.error('委托买卖盘中，其成交量队列数据校验错误，存在特殊字符!');
 					return;
 				}
 				
