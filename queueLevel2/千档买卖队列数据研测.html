@@ -246,10 +246,10 @@
 					var day = moment().format('YYYYMMDD');
 					var filename = this.stock.name + '-' + this.stock.code + '-'+ day + '-收市千档队列';
 					
-					var isPrompt = window.prompt('请输入文件名称: ', filename);
-					if(isPrompt) {
+					var isPromptText = window.prompt('请输入文件名称: ', filename);
+					if(isPromptText) {
 						var blob = new Blob([this.form.queueData], {type: "text/plain;charset=utf-8"});
-						saveAs(blob, filename + ".txt");
+						saveAs(blob, isPromptText + ".txt");
 					}
 				},
 				// 重置图表

@@ -183,7 +183,8 @@
 					
 					// 买入过户费
 					var initTransferFee = initBuyAmount * 0.0001;
-					console.log('初始买入过户费 => ' + initTransferFee);
+					!this.isTransferFee ? initTransferFee = 0 : '';
+					// console.log('初始买入过户费 => ' + initTransferFee);
 					
 					var count = {
 						$commissionCounts: 0, // T+N 过程手续费总计
@@ -235,7 +236,7 @@
 					
 					
 					if(count.$volSizes > 0) {
-						var _costPrice = (initBuyAmount + initbuyCommission + count.$commissionCounts + count.$amountCounts) / count.$volSizes;
+						var _costPrice = (initBuyAmount + initbuyCommission + initTransferFee + count.$commissionCounts + count.$amountCounts) / count.$volSizes;
 						var floorIndex = _costPrice.toString().indexOf('.');
 						var text = floorIndex > 0 ? _costPrice.toString().substr(0, floorIndex + 4) : _costPrice;
 						this.costPrice = text;

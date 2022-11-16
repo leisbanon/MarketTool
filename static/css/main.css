@@ -6,7 +6,7 @@ body { height: 100%;background-color: rgba(40,44,53,0.75);color: white; }
 #app input { outline: none; width: 140px; }
 #app h2 { color: rgba(255,167,0);border-bottom: 1px #DDD solid;padding-bottom: 5px;user-select: none;width: 249px;}
 #app .diff { margin-bottom: 55px;position: relative; }
-#app .diff span,li,.text { font-size: 17px; }
+#app .diff span,li,.text { font-size: 16px; }
 #app .diff ul { display: inline-block;margin: 0;position: absolute;bottom: 0; }
 #app .diff ul li { margin-top: 11px; }
 #app .diff ul li span { cursor: help; }

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>T+0 日内高低位成本研测</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style type="text/css">
+		#app { margin-left: 28px; }
+		.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 32px 0 16px 0;}
+		.describe {transform: scale(0.85);transform-origin: left top;line-height: 25px;color: rgba(255,167,0);}
+		.title {font-size: 18px;margin-bottom: 16px;font-weight: bold;}
+		
+		.details {display: flex;}
+		.details ol {list-style: none;margin: 0;padding: 0;}
+		.details ol li:not(.details-count li) {padding: 7px 0;position: relative;border-bottom: 1px #888 dashed;}
+		.details ol li span { display: inline-block;margin-right: 22px;}
+		
+		.details-count {position: relative !important;display: inline-flex !important;margin: 22px 0 !important;border: 1px #FFFFFF solid;border-radius: 100px;}
+		.details-count li {margin-right: 50px;}
+		
+		.columns {display: inline-flex;align-items: center;margin-right: 22px;}
+		.columns  .date {transform: scale(0.85);text-align: center;}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 全局值 -->
+			<div class="diff" style="margin-bottom: 38px;">
+				<h2 style="color: white;width: 410px;">全局值设定：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
+				<div class="box">
+					<span>股票代码：</span>
+					<input type="text" v-model="form.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" @change="reset"/>
+					
+					<button type="button" @click="getStockInfo" style="margin-left: 18px;">查询并计算</button>
+				</div><br/>
+				
+				<div class="box">
+					<span>初始成本：</span>
+					<input type="number" v-model="form.openPrice" @input="datasGroupHandle" />
+					
+					<span>&emsp;收&nbsp;盘&nbsp;价：</span>
+					<input type="number" v-model="form.closePrice" @input="datasGroupHandle" readonly style="cursor: no-drop;" />
+					
+					<span>&emsp;买入股数</span>
+					<input type="number" v-model="form.vol" @input="datasGroupHandle" />
+				</div><br/>
+				
+				<div class="box">
+					<span>间隔天数：</span>
+					<input type="number" v-model="form.days" placeholder="指定间隔的天数" @input="onDayChange" @keyup="onKeyUps" />
+					
+					<span>&emsp;开始时间：</span>
+					<input type="date" v-model="form.beginTime" placeholder="请输入开始时间" @change="onDateChange" />
+					
+					<span>&emsp;结束时间：</span>
+					<input type="date" v-model="form.endTime" placeholder="请输入结束时间" />
+				</div>
+				
+				<div class="middle-line"></div>
+				
+				<div class="box">
+					<div class="title red-color">包含手续费：</div>
+					<span>佣&emsp;&emsp;金：</span>
+					<input type="number" v-model="form.commissionRate" style="width: 80px;" placeholder="请输入佣金" @input="onChange" /> %
+					
+					<span>&emsp;印花税：{{ form.stampDuty }}%</span>
+					
+					<span>&emsp;过 户 费：</span>
+					<input type="checkbox" v-model="isTransferFee" @change="onChange" style="width: 20px;margin: 0;" />
+					<span>{{ isTransferFee ? '是' : '否' }}</span>
+					
+					<ol class="describe">
+						<li>佣金：双边收取，按照成交金额进行结算，不足5元按照 “5元” 收取</li>
+						<li>印花税：单边收取，固定为卖出成交金额的 “千分之一”</li>
+						<li>过户费：双边收取，按照成交金额的 “千分之0.1” 收取，（2022年4月29日起，将股票交易过户费总体下调50%，即原来是万分之二），仅上海市场收取</li>
+					</ol>
+				</div>
+			</div>
+			
+			<!-- Analysis -->
+			<div class="diff" style="margin-bottom: 0;">
+				<h2>Analysis：</h2>
+				<div class="details">
+					<ol>
+						<span class="orange-color">拟日内操作股数（T+0）：</span>
+						<input type="number" v-model="form.dayInVol" @input="datasGroupHandle" />
+						<div></div>
+						
+						<ul class="details-count">
+							<li>收盘总赢损：<span class="red-color">{{ countCompute('0') }}</span></li>
+							<li>高低价比率（min）：<span class="red-color">{{ countCompute('1') }}%</span></li>
+							<li>高低价收益（count）：<span class="red-color">{{ countCompute('2') }}</span></li>
+							<li>高低价收益（average）：<span class="red-color">{{ countCompute('3') }}</span></li>
+						</ul>
+						
+						<li v-for="(day, index) of dataGroupList" :key="index">
+							<div class="columns">
+								<div class="no">【{{ index + 1 }}】</div>
+								<div class="date">
+									<div>{{ window.moment(day.date).format('MM-DD') }}</div>
+									<div>星期{{ window.moment(day.date).format('E') }}</div>
+								</div>
+							</div>
+							
+							<span style="cursor: help;" :title="'收盘价：' + day.closePrice">涨跌幅：<span :class="day.diffRate > 0 ? 'red-color' : 'green-color'">{{ day.diffRate }}%</span></span>
+							<span>收盘赢损：<span :class="day._dayCloseDiffMoney > 0 ? 'red-color' : 'green-color'">{{ day._dayCloseDiffMoney  }}</span></span>
+							<span>最高价：{{ day.maxPrice }}</span>
+							<span>最低价：{{ day.minPrice }}</span>
+							<span>高低价比率：<span class="orange-color">{{ day._dayMaxMinRate }}%</span></span>
+							<span style="margin-right: 0;" :title="'实际收益 - 手续费 = ' + (day._dayMaxMinDiffMoney).toFixed(2) + ' - ' + (day._commissionCounts).toFixed(2)">高低价收益：<span class="red-color">{{ formatMoney(day._dayMaxMinDiffMoney - day._commissionCounts) }}</span></span>
+						</li>
+					</ol>
+				</div>
+			</div>
+		</div>
+	</body>
+	
+	<script src="../static/js/accounting.min.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/axios.min.js"></script>
+	<script type="text/javascript" src="../static/js/moment.js"></script>
+	<script type="text/javascript" src="../stockCommon.minxin.js"></script>
+	
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[
+				$commonMinxin,
+			],
+			data() {
+				return {
+					isTransferFee: true, // 是否计算过户费
+					
+					form:{
+						code: '600188',
+						openPrice: 53.28, // 成本价
+						closePrice: 0, // 收盘价
+						vol: 100, // 成交股数
+						dayInVol: 100, // 日内操作股数（T+0）
+						
+						days: '',
+						beginTime:'2022-09-22', // 开始时间
+						endTime:'', // 结束时间
+						
+						commissionRate: 0.025, // 佣金率
+						stampDuty: 0.1, // 印花税
+						transferFee: 0.01, // 过户费
+					},
+					
+					datalist:[],
+					dataGroupList: [],
+				}
+			},
+			mounted:function() {
+				this.form.endTime = moment().format('YYYY-MM-DD'); 
+				
+				this.getStockInfo();
+			},
+			methods:{
+				onChange:function() {
+					this.datasGroupHandle();
+				},
+				// 统计计算
+				countCompute:function(symbol) {
+					var datalist = this.dataGroupList;
+					
+					if(datalist instanceof Array && datalist.length > 0) {
+						if(symbol == '0') {
+							return datalist[0]._dayCloseDiffMoney;
+						}
+						
+						if(symbol == '1') {
+							var list = datalist.map(function(item) {
+								return Number(item._dayMaxMinRate);
+							});
+							return Math.min.apply(false, list);
+						}
+						
+						if(symbol == '2') {
+							var count = datalist.map(function(item) {
+								return Number(item._dayMaxMinDiffMoney - item._commissionCounts);
+							}).reduce(function(total, number) {
+								return total + number;
+							})
+							return this.formatMoney(count);
+						}
+						
+						if(symbol == '3') {
+							var coutAverage = datalist.map(function(item) {
+								return Number(item._dayMaxMinDiffMoney - item._commissionCounts);
+							}).reduce(function(total, number) {
+								return total + number;
+							})
+							return this.formatMoney(coutAverage / datalist.length);
+						}
+					}
+				},
+				// 查询个股基本信息
+				getStockInfo:function(callback) {
+					var _this = this;
+					
+					var stock = this.form;
+					if(!stock.endTime || !stock.beginTime) {
+						alert('全局值设定参数不完整！');
+						return;
+					}
+					
+					this.fetchStockInfo(this.form.code,function(data) {
+						Object.assign(_this.stock, data)
+						_this.stock.isRequest = true;
+						
+						// 查询个股历史行情数据
+						_this.stockHistoryAction(data.code);
+					})
+				},
+				// 查询个股历史日线数据
+				stockHistoryAction:function(code) {
+					var _this = this;
+					var params = {
+						code: code,
+						beginTime: this.form.beginTime,
+						endTime: this.form.endTime
+					}
+					
+					this.fetchStockHistory(params.code,params.beginTime, params.endTime, function(list) {
+						if(JSON.stringify(list) != JSON.stringify(_this.dataGroupList)) {
+							_this.datalist = list;
+							_this.datasGroupHandle(list);
+						}
+					})
+				},
+				// 数据组合计算操作
+				datasGroupHandle:function() {
+					// 设置收盘价
+					!this.form.closePrice ? this.form.closePrice = this.datalist[0].close_price : '';
+					
+					var _datalist = [];
+					for(var i = 0;i < this.datalist.length;i++) {
+						var data = this.datalist[i];
+						
+						// 日期
+						var date = data['date'];
+						// 日内涨跌幅
+						var diffRate = data['diff_rate'];
+						// 收盘价
+						var closePrice = data['close_price'];
+						// 最高价
+						var maxPrice = data['max_price'];
+						// 最低价
+						var minPrice = data['min_price'];
+						
+						// 日内收盘盈亏
+						var _dayCloseDiffMoney = (closePrice * this.form.vol) - (this.form.openPrice * this.form.vol);
+						_dayCloseDiffMoney = this.formatMoney(_dayCloseDiffMoney);
+						
+						// 日内高低价比率
+						var _dayMaxMinRate = (maxPrice - minPrice) / minPrice * 100;
+						_dayMaxMinRate = (_dayMaxMinRate || 0).toFixed(2);
+						
+						// 日内高底价收益
+						var _dayMaxMinDiffMoney = (maxPrice * this.form.dayInVol) - (minPrice * this.form.dayInVol);
+						
+						
+						// ------- 手续费计算 -------
+						// 买入佣金
+						var _buyCommission = minPrice * this.form.dayInVol * this.form['commissionRate'] / 100;
+						_buyCommission = _buyCommission > 5 ? _buyCommission : 5;
+						
+						// 卖出佣金
+						var _sellCommission = maxPrice * this.form.dayInVol * this.form['commissionRate'] / 100;
+						_sellCommission = _sellCommission > 5 ? _sellCommission : 5;
+						
+						// 印花税
+						var _stampDuty = maxPrice * this.form.dayInVol * this.form['stampDuty'] / 100;
+						
+						// 买入过户费
+						var initTransferFee = minPrice * this.form.dayInVol * this.form['transferFee'] / 100;
+						!this.isTransferFee ? initTransferFee = 0 : '';
+						// console.log('买入过户费 => ' + initTransferFee);
+						
+						// 卖出过户费
+						var transferFee = maxPrice * this.form.dayInVol * this.form['transferFee'] / 100;
+						!this.isTransferFee ? transferFee = 0 : '';
+						// console.log('卖出过户费 => ' + transferFee);
+						
+						// T+N 过程手续费总计
+						var _commissionCounts = _buyCommission + _sellCommission + _stampDuty + initTransferFee + transferFee;
+						// console.log("_commissionCounts => " + _commissionCounts);
+						
+						_datalist.push({
+							date: date,
+							diffRate: diffRate,
+							closePrice: closePrice,
+							maxPrice: maxPrice,
+							minPrice: minPrice,
+							_dayCloseDiffMoney: _dayCloseDiffMoney,
+							_dayMaxMinRate: _dayMaxMinRate,
+							_dayMaxMinDiffMoney: _dayMaxMinDiffMoney,
+							_commissionCounts: _commissionCounts,
+						})
+					}
+					
+					this.dataGroupList = _datalist;
+					// console.log(JSON.stringify(this.dataGroupList));
+				},
+				// 开始时间变动时触发
+				onDateChange:function(e) {
+					var _start = moment(e.target.value);
+					var _end = moment(this.form.endTime);
+					this.form.days = _end.diff(_start, 'day');
+				},
+				/**
+				 * 按键监听
+				 */
+				onKeyUps:function(event) {
+					if(event.keyCode == 13 && !this.stock.isRequest) {
+						this.getStockInfo()
+					}
+				},
+				// 指定查询天数变化时
+				onDayChange:function(e) {
+					this.form.beginTime = moment(this.form.endTime).subtract(e.target.value, 'days').format('YYYY-MM-DD');
+					this.reset()
+				},
+				/**
+				 * 格式化金额
+				 */
+				formatMoney:function(money) {
+					return window.accounting.formatMoney(money, { symbol: '¥' })
+				},
+			}
+		})
+	</script>
+</html>
