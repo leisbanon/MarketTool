@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>量价计算研测</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style type="text/css">
+		#app { margin-left: 28px; }
+		.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 23px 0;}
+		
+		.chart-wrapper {display: flex;justify-content: space-around;background-color: white;border-radius: 6px;flex-wrap: wrap;padding: 15px 0px;overflow: auto;}
+		.chart-wrapper .chart-box {height: 255px;width: 48%;border-radius: 6px;outline: 1px #DDD solid;margin-bottom: 15px;}
+		
+		@keyframes consoleCount {from{transform: translateY(-100%);}to{transform: translateY(0);}}
+		.count-planel-console {position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: #38393D;z-index: 100;padding: 30px;overflow: auto;transition: transform 0.25s ease-out;;animation: consoleCount 0.25s ease-out;display: none;z-index: 1000;}
+		.count-planel-console p {font-size: 18px;font-style: italic;text-decoration: underline;margin: 0;}
+		.count-planel-console .ul-container {display: inline-block;}
+		.count-planel-console ul {float: left;position: relative !important;margin-right: 60px !important;}
+		.count-planel-console ul li {transform: scale(0.98);}
+		.console-close {width: 22px;height: 22px;position: absolute;right: 60px;top: 30px;cursor: pointer;}
+		.console-close:active {opacity: 0.85;}
+		
+		.footer-buttons {margin: 15px 0 15px 30px;}
+		.footer-lines {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.65);margin-top: 29px;}
+		.footer-buttons button {color: #6495ED;padding: 0 15px;cursor: pointer;font-family: cursive;font-size: 18px;}
+		
+		
+		@keyframes toolsFrames{from{transform: translateX(-100%);}to{transform: translateX(0);}}
+		.tools {position: fixed;height: 100%;width: 100px;top: 0;bottom: 0;left: 0;transform: translateX(-95px);transition: transform 0.3s ease-out;z-index: 1000;cursor: pointer;padding-right: 50px;}
+		.tools ul {position: relative;list-style: none;margin: 0;padding: 0;display: flex;flex-direction: column;align-items: center;justify-content: center;height: 100%;}
+		.tools ul li {background-color: #31363D;color: white;border-radius: 50%;height: 58px;width: 58px;position: relative;cursor: pointer;user-select: none;margin: 22px 0;box-shadow: 0px 0px 5px #31363d;}
+		.tools ul li img:active {opacity: 0.75;}
+		.tools ul li img {position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);width: 30px;height: 30px;}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 全局值 -->
+			<div class="diff" style="margin-bottom: 22px;">
+				<h2 style="color: white;width: 410px;">全局值设定：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
+				<div class="box">
+					<span>股票代码：</span>
+					<input type="text" v-model="form.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" @change="reset"/>
+					
+					<span>&emsp;选择策略：</span>
+					<select v-model="form.strategyType" style="width: 148px;" @change="startStrategyController">
+						<option value="STRATEGY_ONE">策略一</option>
+						<option value="STRATEGY_TWO">策略二</option>
+					</select>
+					
+					<button type="button" @click="fetchIteration" style="margin-left: 18px;">查询并计算</button>
+					<!-- <button type="button" @click="test" style="margin-left: 18px;">Test</button> -->
+				</div><br/>
+				
+				<div class="box">
+					<span>间隔天数：</span>
+					<input type="number" v-model="form.days" placeholder="指定间隔的天数" @input="onDayChange" @keyup="onKeyUps" />
+					
+					<span>&emsp;开始时间：</span>
+					<input type="date" v-model="form.beginTime" placeholder="请输入开始时间" />
+					
+					<span>&emsp;结束时间：{{ form.endTime }}</span>
+					
+					<span>&emsp;只查询开始时间：</span>
+					<input type="checkbox" v-model="onceDay" @change="onceDayChange" style="width: 20px;margin: 0;" />
+					<span>{{ onceDay ? '是' : '否' }}</span>
+				</div>
+				<div class="middle-line"></div>
+			</div>
+			
+			
+			<!-- 图表容器 -->
+			<div class="chart-wrapper" id="chart-wrapper">
+				<!-- <div id="vol-chart-bar" class="chart-box"></div> -->
+				<!-- <div id="vol-chart-line" class="chart-box"></div> -->
+				
+				
+				<!-- 统计分析 -->
+				<div class="count-planel-console" id="console-count">
+					<div class="console-close" @click="toogleConsole"><img src="../static/icon/icon-close.png" width="100%" height="100%" /></div>
+					<div class="data-content" v-for="(item, index) in levelPlayingCount" :key="index">
+						<p class="orange-color">{{ item.type }} Minute Level Data Count Analysis：</p>
+						<div class="ul-container">
+							<ul>
+								<li>Hollow Line Volumn Count：{{ formatVolText(item.count.hollowVolCount) }}</li>
+								
+								<li>Solid Line Volumn Count：{{ formatVolText(item.count.solidVolCount) }}</li>
+								
+								<li :class="item.count.volSymbolRate > 0 ? 'red-color' : 'green-color'">
+								Vol Symbol Rate：≈{{ item.count.volSymbolRate }}%
+								</li>
+							</ul>
+							
+							<ul>
+								<li>Hollow Line Amount Count：{{ formatAmountText(item.count.hollowAmountCount) }}</li>
+								
+								<li>Solid Line Amount Count：{{ formatAmountText(item.count.solidAmountCount) }}</li>
+								
+								<li :class="item.count.amountSymbolRate > 0 ? 'red-color' : 'green-color'">
+								Amount Symbol Rate：≈{{ item.count.amountSymbolRate }}%
+								</li>
+							</ul>
+							
+							<ul>
+								<li>K-Lines Data Length：{{ item.count.size }}</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+				
+				<!-- 工具 -->
+				<div class="tools" id="tools">
+					<ul>
+						<li title="Shortcut T" @click="toogleStrategy"><img style="transform: translate(-50%, -61%);" src="../static/icon/strategy.png"></li>
+						<li title="Shortcut C" @click="toogleConsole"><img src="../static/icon/analysis.png"></li>
+						<li title="Shortcut F" @click="fullpage"><img src="../static/icon/fullpage.png"></li>
+						<li title="Shortcut R" @click="zoomCharts"><img src="../static/icon/refresh.png"></li>
+					</ul>
+				</div>
+			</div>
+			
+			<div class="footer-lines"></div>
+		</div>
+	</body>
+	
+	<script src="../static/js/echarts.min.js" type="text/javascript" charset="utf-8"></script>
+	<script src="../static/js/screenfull.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/axios.min.js"></script>
+	<script type="text/javascript" src="../static/js/moment.js"></script>
+	<script type="text/javascript" src="../stockCommon.minxin.js"></script>
+	
+	<script type="text/javascript" src="./vol-price-tools.minxin.js"></script>
+	<script type="text/javascript" src="./vol-price.controller.minxin.js"></script>
+	<script type="text/javascript" src="./basicsPlayStrategy.rule.one.js"></script>
+	<script type="text/javascript" src="./fullvolPlayAverageStrategy.rule.two.js"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[
+				$commonMinxin,
+				$volPriceControllerMinxin,
+				
+				$volPriceToolsMinxin,
+				$basicsPlayStrategyRule,
+				$fullvolPlayAverageStrategyRule
+			],
+			data() {
+				return {
+					onceDay: true,
+					
+					form:{
+						code: '603858',
+						days:6, // 指定查询的天数
+						beginTime:'', // 开始时间
+						endTime:'', // 结束时间
+						kLineType: '5',
+						strategyType:'STRATEGY_TWO', // STRATEGY_ONE | STRATEGY_TWO
+					},
+					
+					// 创建四个级别的可视图表
+					levelTimes: {"5":[{"min":"21.82","max":"22.49","volumn":"38904.22","time":"202211180935","close":"22.30","open":"21.94","minute":"202211180935","diffRate":"1.64","amountCount":"8676","date":"2022-11-18 09:35","yesterdayClose":"21.94"},{"min":"21.98","max":"22.30","volumn":"19457.10","time":"202211180940","close":"21.98","open":"22.29","minute":"202211180940","diffRate":"-1.43","amountCount":"4277","date":"2022-11-18 09:40","yesterdayClose":"21.94"},{"min":"21.94","max":"22.29","volumn":"14051.19","time":"202211180945","close":"22.20","open":"21.97","minute":"202211180945","diffRate":"1.00","amountCount":"3119","date":"2022-11-18 09:45","yesterdayClose":"21.94"},{"min":"22.08","max":"22.36","volumn":"10634.28","time":"202211180950","close":"22.29","open":"22.18","minute":"202211180950","diffRate":"0.41","amountCount":"2370","date":"2022-11-18 09:50","yesterdayClose":"21.94"},{"min":"22.29","max":"22.48","volumn":"13903.11","time":"202211180955","close":"22.37","open":"22.29","minute":"202211180955","diffRate":"0.36","amountCount":"3110","date":"2022-11-18 09:55","yesterdayClose":"21.94"},{"min":"22.28","max":"22.42","volumn":"8373.00","time":"202211181000","close":"22.37","open":"22.38","minute":"202211181000","diffRate":"0.00","amountCount":"1873","date":"2022-11-18 10:00","yesterdayClose":"21.94"},{"min":"22.31","max":"22.57","volumn":"16227.75","time":"202211181005","close":"22.53","open":"22.31","minute":"202211181005","diffRate":"0.72","amountCount":"3656","date":"2022-11-18 10:05","yesterdayClose":"21.94"},{"min":"22.47","max":"22.60","volumn":"10004.98","time":"202211181010","close":"22.60","open":"22.55","minute":"202211181010","diffRate":"0.31","amountCount":"2261","date":"2022-11-18 10:10","yesterdayClose":"21.94"},{"min":"22.46","max":"22.64","volumn":"9584.30","time":"202211181015","close":"22.55","open":"22.60","minute":"202211181015","diffRate":"-0.22","amountCount":"2161","date":"2022-11-18 10:15","yesterdayClose":"21.94"},{"min":"22.34","max":"22.55","volumn":"6958.10","time":"202211181020","close":"22.35","open":"22.54","minute":"202211181020","diffRate":"-0.89","amountCount":"1555","date":"2022-11-18 10:20","yesterdayClose":"21.94"},{"min":"22.18","max":"22.40","volumn":"7407.93","time":"202211181025","close":"22.18","open":"22.36","minute":"202211181025","diffRate":"-0.76","amountCount":"1643","date":"2022-11-18 10:25","yesterdayClose":"21.94"},{"min":"22.15","max":"22.27","volumn":"5724.74","time":"202211181030","close":"22.23","open":"22.19","minute":"202211181030","diffRate":"0.23","amountCount":"1273","date":"2022-11-18 10:30","yesterdayClose":"21.94"},{"min":"22.22","max":"22.29","volumn":"2654.00","time":"202211181035","close":"22.29","open":"22.22","minute":"202211181035","diffRate":"0.27","amountCount":"592","date":"2022-11-18 10:35","yesterdayClose":"21.94"},{"min":"22.21","max":"22.32","volumn":"4652.00","time":"202211181040","close":"22.22","open":"22.30","minute":"202211181040","diffRate":"-0.31","amountCount":"1034","date":"2022-11-18 10:40","yesterdayClose":"21.94"},{"min":"22.21","max":"22.27","volumn":"1781.77","time":"202211181045","close":"22.26","open":"22.22","minute":"202211181045","diffRate":"0.18","amountCount":"397","date":"2022-11-18 10:45","yesterdayClose":"21.94"},{"min":"22.25","max":"22.48","volumn":"4658.00","time":"202211181050","close":"22.42","open":"22.25","minute":"202211181050","diffRate":"0.72","amountCount":"1044","date":"2022-11-18 10:50","yesterdayClose":"21.94"},{"min":"22.31","max":"22.52","volumn":"4752.69","time":"202211181055","close":"22.37","open":"22.42","minute":"202211181055","diffRate":"-0.22","amountCount":"1063","date":"2022-11-18 10:55","yesterdayClose":"21.94"},{"min":"22.31","max":"22.43","volumn":"1730.00","time":"202211181100","close":"22.37","open":"22.38","minute":"202211181100","diffRate":"0.00","amountCount":"387","date":"2022-11-18 11:00","yesterdayClose":"21.94"},{"min":"22.24","max":"22.43","volumn":"2727.00","time":"202211181105","close":"22.25","open":"22.37","minute":"202211181105","diffRate":"-0.54","amountCount":"607","date":"2022-11-18 11:05","yesterdayClose":"21.94"},{"min":"22.24","max":"22.38","volumn":"1585.00","time":"202211181110","close":"22.36","open":"22.25","minute":"202211181110","diffRate":"0.49","amountCount":"354","date":"2022-11-18 11:10","yesterdayClose":"21.94"},{"min":"22.33","max":"22.41","volumn":"2078.00","time":"202211181115","close":"22.35","open":"22.33","minute":"202211181115","diffRate":"-0.04","amountCount":"464","date":"2022-11-18 11:15","yesterdayClose":"21.94"},{"min":"22.28","max":"22.36","volumn":"2081.00","time":"202211181120","close":"22.31","open":"22.34","minute":"202211181120","diffRate":"-0.18","amountCount":"464","date":"2022-11-18 11:20","yesterdayClose":"21.94"},{"min":"22.22","max":"22.31","volumn":"2073.53","time":"202211181125","close":"22.25","open":"22.31","minute":"202211181125","diffRate":"-0.27","amountCount":"461","date":"2022-11-18 11:25","yesterdayClose":"21.94"},{"min":"22.22","max":"22.30","volumn":"1450.20","time":"202211181130","close":"22.29","open":"22.26","minute":"202211181130","diffRate":"0.18","amountCount":"323","date":"2022-11-18 11:30","yesterdayClose":"21.94"},{"min":"22.29","max":"22.49","volumn":"6202.93","time":"202211181305","close":"22.46","open":"22.29","minute":"202211181305","diffRate":"0.76","amountCount":"1393","date":"2022-11-18 13:05","yesterdayClose":"21.94"},{"min":"22.38","max":"22.47","volumn":"3934.00","time":"202211181310","close":"22.40","open":"22.47","minute":"202211181310","diffRate":"-0.27","amountCount":"881","date":"2022-11-18 13:10","yesterdayClose":"21.94"},{"min":"22.37","max":"22.63","volumn":"8046.38","time":"202211181315","close":"22.60","open":"22.38","minute":"202211181315","diffRate":"0.89","amountCount":"1818","date":"2022-11-18 13:15","yesterdayClose":"21.94"},{"min":"22.56","max":"22.68","volumn":"10283.24","time":"202211181320","close":"22.56","open":"22.61","minute":"202211181320","diffRate":"-0.18","amountCount":"2320","date":"2022-11-18 13:20","yesterdayClose":"21.94"},{"min":"22.53","max":"22.66","volumn":"4503.14","time":"202211181325","close":"22.66","open":"22.60","minute":"202211181325","diffRate":"0.44","amountCount":"1020","date":"2022-11-18 13:25","yesterdayClose":"21.94"},{"min":"22.52","max":"22.65","volumn":"4074.86","time":"202211181330","close":"22.52","open":"22.63","minute":"202211181330","diffRate":"-0.62","amountCount":"918","date":"2022-11-18 13:30","yesterdayClose":"21.94"},{"min":"22.48","max":"22.61","volumn":"2877.00","time":"202211181335","close":"22.58","open":"22.51","minute":"202211181335","diffRate":"0.27","amountCount":"650","date":"2022-11-18 13:35","yesterdayClose":"21.94"},{"min":"22.56","max":"22.76","volumn":"7999.05","time":"202211181340","close":"22.70","open":"22.59","minute":"202211181340","diffRate":"0.53","amountCount":"1816","date":"2022-11-18 13:40","yesterdayClose":"21.94"},{"min":"22.58","max":"22.70","volumn":"3198.00","time":"202211181345","close":"22.59","open":"22.68","minute":"202211181345","diffRate":"-0.48","amountCount":"722","date":"2022-11-18 13:45","yesterdayClose":"21.94"},{"min":"22.53","max":"22.64","volumn":"3721.75","time":"202211181350","close":"22.56","open":"22.60","minute":"202211181350","diffRate":"-0.13","amountCount":"840","date":"2022-11-18 13:50","yesterdayClose":"21.94"},{"min":"22.48","max":"22.59","volumn":"2883.54","time":"202211181355","close":"22.59","open":"22.55","minute":"202211181355","diffRate":"0.13","amountCount":"651","date":"2022-11-18 13:55","yesterdayClose":"21.94"},{"min":"22.55","max":"22.76","volumn":"5284.35","time":"202211181400","close":"22.75","open":"22.58","minute":"202211181400","diffRate":"0.71","amountCount":"1202","date":"2022-11-18 14:00","yesterdayClose":"21.94"},{"min":"22.66","max":"22.77","volumn":"5591.04","time":"202211181405","close":"22.73","open":"22.74","minute":"202211181405","diffRate":"-0.09","amountCount":"1271","date":"2022-11-18 14:05","yesterdayClose":"21.94"},{"min":"22.71","max":"22.85","volumn":"10453.26","time":"202211181410","close":"22.73","open":"22.74","minute":"202211181410","diffRate":"0.00","amountCount":"2376","date":"2022-11-18 14:10","yesterdayClose":"21.94"},{"min":"22.60","max":"22.73","volumn":"4505.45","time":"202211181415","close":"22.69","open":"22.73","minute":"202211181415","diffRate":"-0.18","amountCount":"1022","date":"2022-11-18 14:15","yesterdayClose":"21.94"},{"min":"22.60","max":"22.70","volumn":"2565.00","time":"202211181420","close":"22.61","open":"22.70","minute":"202211181420","diffRate":"-0.35","amountCount":"580","date":"2022-11-18 14:20","yesterdayClose":"21.94"},{"min":"22.61","max":"22.72","volumn":"2277.11","time":"202211181425","close":"22.67","open":"22.61","minute":"202211181425","diffRate":"0.27","amountCount":"516","date":"2022-11-18 14:25","yesterdayClose":"21.94"},{"min":"22.48","max":"22.69","volumn":"4036.00","time":"202211181430","close":"22.49","open":"22.67","minute":"202211181430","diffRate":"-0.79","amountCount":"908","date":"2022-11-18 14:30","yesterdayClose":"21.94"},{"min":"22.38","max":"22.50","volumn":"8287.20","time":"202211181435","close":"22.43","open":"22.49","minute":"202211181435","diffRate":"-0.27","amountCount":"1859","date":"2022-11-18 14:35","yesterdayClose":"21.94"},{"min":"22.38","max":"22.50","volumn":"4094.80","time":"202211181440","close":"22.38","open":"22.43","minute":"202211181440","diffRate":"-0.22","amountCount":"916","date":"2022-11-18 14:40","yesterdayClose":"21.94"},{"min":"22.35","max":"22.47","volumn":"7156.20","time":"202211181445","close":"22.38","open":"22.38","minute":"202211181445","diffRate":"0.00","amountCount":"1602","date":"2022-11-18 14:45","yesterdayClose":"21.94"},{"min":"22.29","max":"22.38","volumn":"9234.27","time":"202211181450","close":"22.29","open":"22.38","minute":"202211181450","diffRate":"-0.40","amountCount":"2058","date":"2022-11-18 14:50","yesterdayClose":"21.94"},{"min":"22.29","max":"22.34","volumn":"9531.00","time":"202211181455","close":"22.31","open":"22.29","minute":"202211181455","diffRate":"0.09","amountCount":"2126","date":"2022-11-18 14:55","yesterdayClose":"21.94"},{"min":"22.31","max":"22.38","volumn":"5500.38","time":"202211181500","close":"22.36","open":"22.31","minute":"202211181500","diffRate":"0.22","amountCount":"1230","date":"2022-11-18 15:00","yesterdayClose":"21.94"}],"30":[{"min":"21.82","max":"22.49","volumn":"105322.90","time":"202211181000","close":"22.37","open":"21.94","minute":"202211181000","diffRate":"1.96","amountCount":"23561","date":"2022-11-18 10:00","yesterdayClose":"21.94"},{"min":"22.15","max":"22.64","volumn":"55907.80","time":"202211181030","close":"22.23","open":"22.31","minute":"202211181030","diffRate":"-0.63","amountCount":"12428","date":"2022-11-18 10:30","yesterdayClose":"21.94"},{"min":"22.21","max":"22.52","volumn":"20228.46","time":"202211181100","close":"22.37","open":"22.22","minute":"202211181100","diffRate":"0.63","amountCount":"4525","date":"2022-11-18 11:00","yesterdayClose":"21.94"},{"min":"22.22","max":"22.43","volumn":"11994.73","time":"202211181130","close":"22.29","open":"22.37","minute":"202211181130","diffRate":"-0.36","amountCount":"2674","date":"2022-11-18 11:30","yesterdayClose":"21.94"},{"min":"22.29","max":"22.68","volumn":"37044.55","time":"202211181330","close":"22.52","open":"22.29","minute":"202211181330","diffRate":"1.03","amountCount":"8342","date":"2022-11-18 13:30","yesterdayClose":"21.94"},{"min":"22.48","max":"22.76","volumn":"25963.69","time":"202211181400","close":"22.75","open":"22.51","minute":"202211181400","diffRate":"1.02","amountCount":"5907","date":"2022-11-18 14:00","yesterdayClose":"21.94"},{"min":"22.48","max":"22.85","volumn":"29427.86","time":"202211181430","close":"22.49","open":"22.74","minute":"202211181430","diffRate":"-1.14","amountCount":"6618","date":"2022-11-18 14:30","yesterdayClose":"21.94"},{"min":"22.29","max":"22.50","volumn":"43803.85","time":"202211181500","close":"22.36","open":"22.49","minute":"202211181500","diffRate":"-0.58","amountCount":"9795","date":"2022-11-18 15:00","yesterdayClose":"21.94"}],"60":[{"min":"21.82","max":"22.64","volumn":"161230.70","time":"202211181030","close":"22.23","open":"21.94","minute":"202211181030","diffRate":"1.32","amountCount":"35842","date":"2022-11-18 10:30","yesterdayClose":"21.94"},{"min":"22.21","max":"22.52","volumn":"32223.19","time":"202211181130","close":"22.29","open":"22.22","minute":"202211181130","diffRate":"0.27","amountCount":"7183","date":"2022-11-18 11:30","yesterdayClose":"21.94"},{"min":"22.29","max":"22.76","volumn":"63008.24","time":"202211181400","close":"22.75","open":"22.29","minute":"202211181400","diffRate":"2.06","amountCount":"14334","date":"2022-11-18 14:00","yesterdayClose":"21.94"},{"min":"22.29","max":"22.85","volumn":"73231.71","time":"202211181500","close":"22.36","open":"22.74","minute":"202211181500","diffRate":"-1.71","amountCount":"16375","date":"2022-11-18 15:00","yesterdayClose":"21.94"}],"day":[{"min":"21.81","max":"22.86","volumn":"329694.00","time":"20221118","close":"22.36","open":"21.94","diffRate":"1.91","amountCount":"73720","date":"2022-11-18","yesterdayClose":"21.94"}]},
+					// 查询顺序
+					levelIndex: ['30', '5', '60', 'day']
+				}
+			},
+			mounted:function() {
+				this.form.endTime = moment().format('YYYY-MM-DD'); 
+				this.form.beginTime = moment().subtract(this.form.days, 'days').format('YYYY-MM-DD');
+				
+				this.createEcharts();
+				this.startStrategyController();
+			},
+			methods:{
+				onceDayChange:function() {
+					this.createEcharts();
+					this.fetchIteration();
+				},
+				fetchIteration:function() {
+					var _this = this;
+					var times = JSON.parse(JSON.stringify(_this.levelIndex));
+					
+					var iterationIndex = 0;
+					var levelTimes = {};
+					var interation = function() {
+						var key = times[iterationIndex];
+						if(key) {
+							// 排除日线数据
+							if(key == 'day' && _this.onceDay) {
+								iterationIndex += 1;
+								interation();
+								return;
+							}
+							
+							_this.toggleLoading(true, iterationIndex);
+							_this.getStockData(key, function(datalist) {
+								_this.toggleLoading(false, iterationIndex);
+								
+								levelTimes[key] = datalist;
+								iterationIndex += 1;
+								interation();
+							});
+						}else {
+							_this.levelTimes = levelTimes;
+							_this.startStrategyController();
+							// console.log(JSON.stringify(levelTimes));
+						}
+					};
+					interation();
+				},
+				// 查询个股基本信息
+				getStockData:function(time, callback) {
+					var _this = this;
+					
+					var form = this.form;
+					if(!form.endTime || (!form.days && !form.beginTime)) {
+						alert('全局值设定参数不完整');
+						return;
+					}
+					
+					var params = {
+						code: form.code,
+						time: time,
+						beginDay: moment(form.beginTime).subtract(3, 'days').format('YYYYMMDD'),
+					}
+					
+					this.fetchStockRealKlineData(params,function(data) {
+						Object.assign(_this.stock, {
+							code: data.code,
+							name: data.name,
+						});
+						
+						// 添加基础数据计算，赋值
+						var dataList = data.dataList.reverse();
+						var _spaceSize = 240 / (time == 'day' ? 240 : time);
+						
+						for(var index in dataList) {
+							var item = dataList[index];
+							// 涨跌幅
+							item.diffRate = index > 0 ? ((item['close'] - dataList[index - 1].close) / dataList[index - 1].close * 100).toFixed(2) : 0;
+							
+							// 交易总金额
+							item.amountCount = (item['close'] * item['volumn'] / 100).toFixed(0);
+							
+							// 时间
+							var datetime = item['time'];
+							var _d = datetime.substr(0, 8);
+							var _h = datetime.substr(8, 2);
+							var _m = datetime.substr(10, 2);
+							if(_h && _m) {
+								item['date'] = moment(_d).format('YYYY-MM-DD ' + _h + ':' + _m);
+							}else {
+								item['date'] = moment(_d).format('YYYY-MM-DD');
+							}
+							
+							// 赋值昨日收盘价
+							var _signIndex = dataList[index - (index % _spaceSize) - 1];
+							item['yesterdayClose'] = _signIndex ? _signIndex.close : 0;
+						}
+						
+						// 只查询开始时间的 K 线数据
+						if(_this.onceDay == true) {
+							dataList = dataList.filter(function(item) {
+								var isOnceDay = moment(item.date).format('YYYY-MM-DD') == moment(form.beginTime).format('YYYY-MM-DD');
+								if(isOnceDay) {
+									return item;
+								}
+							})
+						}
+						
+						callback(dataList);
+					}).catch(function() {
+						callback(false);
+					})
+				},
+				// 开始时间变动时触发
+				onDateChange:function(e) {
+					var _start = moment(e.target.value);
+					var _end = moment(this.form.endTime);
+					this.form.days = _end.diff(_start, 'day');
+				},
+				// 指定查询天数变化时
+				onDayChange:function(e) {
+					this.form.beginTime = moment(this.form.endTime).subtract(e.target.value, 'days').format('YYYY-MM-DD');
+					this.reset()
+				},
+				// 按键监听
+				onKeyUps:function(event) {
+					if(event.keyCode == 13 && !this.stock.isRequest) {
+						this.fetchIteration()
+					}
+				},
+				// 切换显示加载动画
+				toggleLoading:function(status, index) {
+					var action = status ? 'showLoading' : 'hideLoading';
+					var chartsBox = document.querySelectorAll('.chart-box');
+					
+					echarts.getInstanceByDom(chartsBox[index])[action]({
+						text: 'Loading',
+						color: '#6495ED',
+						lineWidth: 2,
+						textColor: '#888',
+						fontSize: 14,
+					});
+				},
+				// 格式化成交量
+				formatVolText:function(volumn) {
+					if(volumn / 10000 > 10) {
+						return Number((volumn / 10000).toFixed(2))  + '万';
+					}else {
+						return Number(volumn).toFixed(0);
+					}
+				},
+				// 格式化金额
+				formatAmountText:function(amount) {
+					if(amount / 10000 > 1) {
+						return Number((amount / 10000).toFixed(2)) + '亿';
+					}else {
+						return Number(amount).toFixed(0) + '万';
+					}
+				},
+			}
+		})
+	</script>
+</html>

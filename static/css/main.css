@@ -35,25 +35,5 @@ body { height: 100%;background-color: rgba(40,44,53,0.75);color: white; }
 input[type="radio"] {width: 28px !important;}
 label { cursor: pointer; }
 
-div[tooltip="tooltip"] {
-    position: absolute;
-    background-color: rgba(51,51,51,0.95);
-    color: white;
-    padding: 7px 10px;
-    border-radius: 5px;
-    bottom: 35px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 14px;
-	user-select: all;
-}
-div[tooltip="tooltip"]::after {
-	content: "";
-	position: absolute;
-	top: 100%;
-	left: 50%;
-	margin-left: -5px;
-	border-width: 5px;
-	border-style: solid;
-	border-color: rgba(51,51,51,0.95) transparent transparent transparent;
-}
+div[tooltip="tooltip"] {position: absolute;background-color: rgba(51,51,51,0.95);color: white;padding: 7px 10px;border-radius: 5px;bottom: 35px;left: 50%;transform: translateX(-50%);font-size: 14px;user-select: all;}
+div[tooltip="tooltip"]::after {content: "";position: absolute;top: 100%;left: 50%;margin-left: -5px;border-width: 5px;border-style: solid;border-color: rgba(51,51,51,0.95) transparent transparent transparent;}

@@ -74,7 +74,7 @@
 								
 								<span>&emsp;收盘{{ formatRenderText(key) }}：<span :class="key == 'hollowLines' ? 'red-color' : 'green-color'">{{ day.diffRate }}%</span></span>
 								
-								<span>&emsp;当日最高{{ formatRenderText(key) }}：{{ day.maxDiffRate }}%</span>
+								<span>&emsp;当日{{ formatRenderText(key) }}：{{ day.maxDiffRate }}%</span>
 							</div>
 						</div>
 						
@@ -110,7 +110,7 @@
 								</li>
 								
 								<li>
-									<span>日内最高{{ formatRenderText(key) }}均值（Average）：</span>
+									<span>日内{{ formatRenderText(key) }}均值（Average）：</span>
 									<span :class="key == 'hollowLines' ? 'red-color' : 'green-color'">{{ dayDiffAverageRateCommon(key, 'maxDiffRate') }}%</span>
 								</li>
 							</ul>

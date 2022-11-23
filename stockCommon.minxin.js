@@ -12,6 +12,7 @@ var $commonMinxin = {
 			},
 			
 			globalUrl:{
+				STOCK_REAL_KLINE_DATA_URL: 'https://route.showapi.com/131-50',
 				STOCK_INFO_URL:'https://route.showapi.com/131-43', // 查询股票信息 https://www.showapi.com/apiGateway/view/131/43#tabs
 				STOCK_HISOTRY_URL:'https://route.showapi.com/131-47', // 查询股票历史日线行情 https://www.showapi.com/apiGateway/view/131/47#tabs
 			},
@@ -50,6 +51,48 @@ var $commonMinxin = {
 	methods:{
 		reset:function() {
 			this.stock.isRequest = false;
+		},
+		/**
+		 * 查询股票K线实时行情数据
+		 * @param {Object} params
+		 * @param {Object} callback
+		 */
+		fetchStockRealKlineData:function(data, callback) {
+			var _this = this;
+			var params = JSON.parse(JSON.stringify(this.signdata));
+			Object.assign(params, data);
+			
+			var _finally = null;
+			var _catch = null;
+			var chainObject = {
+				then:function() { },
+				catch:function(fun) { _catch = fun },
+				finally:function(fun) { _finally = fun }
+			}
+			
+			axios({
+				method: 'post',
+				url: this.globalUrl['STOCK_REAL_KLINE_DATA_URL'],
+				data: params,
+			}).then(function(res) {
+				var data = res.data;
+				if(data.showapi_res_code == 0) {
+					var resbody = data.showapi_res_body;
+					if(resbody.ret_code == 0) {
+						if(resbody.dataList.length > 0) {
+							callback(resbody);
+						}else {
+							_catch instanceof Function ? _catch('无查询数据...') : '';
+						}
+					}else {
+						_catch instanceof Function ? _catch(resbody.remark) : '';
+					}
+				}
+			}).finally(function() {
+				_finally instanceof Function ? _finally() : '';
+			}) 
+			
+			return chainObject;
 		},
 		/**
 		 * 查询股票基本信息

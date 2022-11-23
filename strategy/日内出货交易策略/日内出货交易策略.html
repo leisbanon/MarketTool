@@ -24,6 +24,9 @@
 		
 		.data-view {padding: 0;margin: 0;margin-top: 5px;transform: scale(0.8);transform-origin: left bottom;}
 		.data-view-block {display: block;margin-bottom: 3px;}
+		
+		.sell-strategy-ol {display: flex;}
+		.sell-strategy-ol li {margin-right: 45px;}
 	</style>
 	
 	<body>
@@ -61,6 +64,24 @@
 					<li>佣金：双边收取，按照成交金额进行结算，不足5元按照 “5元” 收取</li>
 					<li>印花税：单边收取，固定为卖出成交金额的 “千分之一”</li>
 					<li>过户费：双边收取，按照成交金额的 “千分之0.1” 收取，（2022年4月29日起，将股票交易过户费总体下调50%，即原来是万分之二），仅上海市场收取</li>
+				</ol>
+				
+				<!-- 卖出策略 -->
+				<span class="red-color">Sell Strategy：</span><br/>
+				<sub>视综合情况执行卖出交易的时间节点</sub>
+				<ol class="describe sell-strategy-ol">
+					<li>板块指数与行情（相对性联系到上下游板块的关系）；</li>
+					<li>大盘情绪；</li>
+					<li>个股内日涨跌幅数值研测（相对K线统计分析）；</li>
+					<li>消息面；</li>
+					<li>技术面；</li>
+				</ol>
+				
+				<!-- 止损策越 -->
+				<span class="red-color">Stop Loss Sell：</span><br/>
+				<sub>日内触及止损位卖出策略</sub>
+				<ol class="describe sell-strategy-ol">
+					<li>执行亏损比：5.33%；</li>
 				</ol>
 			</div>
 			

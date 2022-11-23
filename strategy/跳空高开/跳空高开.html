@@ -13,6 +13,10 @@
 			transform: scale(0.75);
 			display: inline-block;
 		}
+		
+		.analysis-wrap {display: flex;}
+		.analysis-wrap main{width: 488px;}
+		.analysis-wrap main .title {padding-left: 25px;font-size: 18px;text-decoration: underline;}
 	</style>
 	
 	<body>
@@ -21,45 +25,66 @@
 		<div id="app">
 			<!-- 查询 -->
 			<div class="diff">
-				<h2 style="color: white;width: 288px;">查询：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
+				<h2 style="color: white;">查询：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
 				
 				<div class="box">
-					<span>* 股票代码：</span>
+					<span>股票代码：</span>
 					<input type="text" v-model="uad.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" @input="reset" />
 					
-					<span>&emsp;* 日期：</span>
+					<span>&emsp;日&emsp;期：</span>
 					<input type="date" v-model="uad.date" placeholder="请输入查询日期" @change="onDateChange"/>
 					
 					<button type="button" @click="getStockInfo" style="margin-left: 18px;">查询</button>
-				</div>
+				</div><br/>
 				
-				<div class="data-diff average-box" style="margin: 0px;">
-					<ol>
-						<li>日&emsp;期：{{ resForm.date }}</li>
-						<li>
-							<span>开盘价：{{ resForm.open_price }} REM，</span>
-							<span>收盘价：{{ resForm.close_price }} REM</span>
-						</li>
-						<li>
-							<span>最低价：{{ resForm.min_price }} REM，</span>
-							<span>最高价：{{ resForm.max_price }} REM</span>
-						</li>
-					</ol>
+				<div class="box">
+					<span>开&nbsp;盘&nbsp;价：</span>
+					<input type="number" v-model="resForm.open_price" @input="computeDataChange" />
+					
+					<span>&emsp;最高价：</span>
+					<input type="number" v-model="resForm.max_price" @input="computeDataChange" />
+					
+					<span>&emsp;最底价：</span>
+					<input type="number" v-model="resForm.min_price" @input="computeDataChange" />
+					
+					<span>&emsp;收盘价：</span>
+					<input type="number" v-model="resForm.close_price" @input="computeDataChange" />
 				</div>
 			</div>
 			
-			<!--  -->
+			<!-- Output compute result -->
 			<div class="data-diff average-box">
-				<h2 style="width: 448px;">Stratery Compute</h2>
-				<ul>
-					<li title="开盘价 - 最低价">开盘价绝对价差<span class="scale-label">-下影线</span>（OP-DIFF）：{{ opDiff() }}</li>
-					<li title="最高价 - 收盘价">收盘价绝对价差<span class="scale-label">-上影线</span>（CI-DIFF）：{{ ciDiff() }}</li><br/>
+				<h2>Stratery Compute</h2>
+				<div class="analysis-wrap">
+					<main>
+						<div class="title red-color">日内上下影线：</div>
+						<ul>
+							<li title="开盘价 - 最低价">开盘价绝对价差<span class="scale-label">-下影线</span>（OP-DIFF）：{{ opDiff() }} {{ opDiff() != '/' ? 'RMB' : '' }}</li>
+							<li title="最高价 - 收盘价">收盘价绝对价差<span class="scale-label">-上影线</span>（CI-DIFF）：{{ ciDiff() }} {{ ciDiff() != '/' ? 'RMB' : '' }}</li><br/>
+							
+							<li title="“开盘价” 到 “最低价” 的下跌比率">开盘价绝对跌幅<span class="scale-label">-下影线</span>（OP-RATE）：{{ opRate() }}{{ opRate() != '/' ? '%' : '' }}</li>
+							<li title="“收盘价” 到 “最高价” 的上升比率">收盘价绝对升幅<span class="scale-label">-上影线</span>（CI-RATE）：{{ ciRate() }}{{ ciRate() != '/' ? '%' : '' }}</li><br/>
+							
+							<li title="OP-RATE 比 CI-RATE">OP-RATE 与 CI-RATE 博弈比：{{ op_ci_rate() }}</li>
+						</ul>
+					</main>
 					
-					<li title="开盘价与最低价的下跌比率">开盘价绝对跌幅<span class="scale-label">-下影线</span>（OP-RATE）：{{ opRate() }}{{ opRate() != '/' ? '%' : ''}}</li>
-					<li title="收盘价与最高价的上升比率">收盘价绝对升幅<span class="scale-label">-上影线</span>（CI-RATE）：{{ ciRate() }}{{ ciRate() != '/' ? '%' : ''}}</li><br/>
-					
-					<li title="OP-RATE 比 CI-RATE">OP-RATE 与 CI-RATE 博弈比值：{{ op_ci_rate() }}</li>
-				</ul>
+					<main>
+						<div class="title red-color">日内多空博弈：</div>
+						<ul>
+							<li title="收盘价 - 最低价">收盘支撑绝对价差<span class="scale-label">-支撑区</span>（BUY-DIFF）：{{ buyDiff() }} {{ buyDiff() != '/' ? 'RMB' : '' }}</li>
+							<li title="最高价 - 收盘价">收盘抛压绝对价差<span class="scale-label">-上影线</span>（SELL-DIFF）：{{ ciDiff() }} {{ ciDiff() != '/' ? 'RMB' : '' }}</li><br/>
+							
+							<li title="“最低价” 到 “收盘价” 的上升比率">收盘价绝对支撑比<span class="scale-label">-下跌</span>（BUY-RATE）：{{ clBuyRate() }}{{ clBuyRate() != '/' ? '%' : '' }}</li>
+							<li title="“最高价” 到 “收盘价” 的下跌比率">收盘价绝对抛压比<span class="scale-label">-上涨</span>（SELL-RATE）：{{ clSellRate() }}{{ clSellRate() != '/' ? '%' : '' }}</li><br/>
+							
+							<li title="BUY-RATE 比 SELL-RATE">
+								<span style="margin-right: 16px;">多方博弈比：<span class="red-color">{{ clBuy_clSell_rate('buy') }}</span></span>
+								<span>空方博弈比：<span class="green-color">{{ clBuy_clSell_rate('sell') }}</span></span>
+							</li>
+						</ul>
+					</main>
+				</div>
 			</div>
 		</div>
 	</body>
@@ -67,83 +92,42 @@
 	<script type="text/javascript" src="../../static/js/axios.min.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../../static/js/moment.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../../stockCommon.minxin.js" charset="utf-8"></script>
+	
+	<script type="text/javascript" src="./upAndDownLinePlaying.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./buyAndSellPlaying.minxin.js" charset="utf-8"></script>
 	<script type="text/javascript">
 		var app = new Vue({
 			el: '#app',
-			mixins:[$commonMinxin],
+			mixins:[
+				$commonMinxin,
+				
+				$upAndDownLinePlayingMinxin,
+				$buyAndSellPlayingMinxin
+			],
 			data() {
 				return {
 					uad:{
-						code:'', // 股票代码
+						code:'600188', // 股票代码
 						date:window.moment().format('YYYY-MM-DD'), // 日期
 					},
 					
 					resForm: { // 请求结果数据
 						date:'', 
 						open_price: 0,
-						close_price: 0,
-						min_price: 0,
 						max_price: 0,
+						min_price: 0,
+						close_price: 0,
 					}, 
 				}
 			},
 			computed:{
 				
 			},
+			watch:{
+			},
+			mounted:function() {
+			},
 			methods:{
-				/**
-				 * OP-RATE 与 CI-RATE 博弈比值
-				 */
-				op_ci_rate() {
-					var number = (this.opRate() - this.ciRate()) / this.opRate() * 100;
-					if(!isNaN(number)) {
-						return number.toFixed(2) + '%';
-					}else {
-						return '/'
-					}
-				},
-				/**
-				 * 收盘价绝对升幅
-				 */
-				ciRate() {
-					if(this.resForm.close_price && this.resForm.max_price) {
-						var result = (this.resForm.close_price - this.resForm.max_price) / this.resForm.close_price * 100;
-						return Math.abs((result || 0)).toFixed(2);
-					}else {
-						return '/'
-					}
-				},
-				/**
-				 * 开盘价绝对跌幅
-				 */
-				opRate() {
-					if(this.resForm.open_price && this.resForm.min_price) {
-						var result = (this.resForm.open_price - this.resForm.min_price) / this.resForm.open_price * 100;
-						return (result || 0).toFixed(2);
-					}else {
-						return '/'
-					}
-				},
-				/**
-				 * 开盘绝对价差
-				 */
-				opDiff() {
-					if(this.resForm.open_price && this.resForm.min_price) {
-						return Math.abs((this.resForm.open_price - this.resForm.min_price)).toFixed(2) + ' REM';
-					}else {
-						return '/'
-					}
-				},
-				/**
-				 * 收盘绝对价差
-				 */
-				ciDiff() {
-					if(this.resForm.close_price && this.resForm.max_price) {
-						return Math.abs((this.resForm.close_price - this.resForm.max_price)).toFixed(2) + ' REM';
-					}else {
-						return '/'
-					}
-				},
 				/**
 				 * 日期发生变化
 				 */
@@ -184,6 +168,13 @@
 						Object.assign(_this.resForm, list[0]);
 					})
 				},
+				computeDataChange:function() {
+					var _this = this;
+					this.uad.code = '';
+					Object.keys(this.stock).forEach(function(key) {
+						_this.stock[key] = '';
+					})
+				}
 			}
 		})
 	</script>
