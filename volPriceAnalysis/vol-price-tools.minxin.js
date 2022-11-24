@@ -9,10 +9,11 @@ var $volPriceToolsMinxin = {
 		
 		// Screen Fullpage
 		screenfull.onchange(function(params) {
-			if(!screenfull.isFullscreen) {
-				setTimeout(function() {
-					_this.zoomCharts();
-				}, 120)
+			_this.zoomCharts();
+			if(screenfull.isFullscreen && screenfull.element.getAttribute('id') == 'chart-wrapper') {
+				screenfull.element.style.overflow = 'auto';
+			}else {
+				screenfull.element.style.overflow = 'hidden';
 			}
 		})
 		

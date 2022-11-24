@@ -12,11 +12,11 @@
 		#app { margin-left: 28px; }
 		.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 23px 0;}
 		
-		.chart-wrapper {display: flex;justify-content: space-around;background-color: white;border-radius: 6px;flex-wrap: wrap;padding: 15px 0px;overflow: auto;}
-		.chart-wrapper .chart-box {height: 255px;width: 48%;border-radius: 6px;outline: 1px #DDD solid;margin-bottom: 15px;}
+		.chart-wrapper {display: flex;justify-content: space-around;background-color: white;border-radius: 6px;flex-wrap: wrap;padding: 15px 0px;}
+		.chart-wrapper .chart-box {height: 265px;width: 47.5%;border-radius: 4px;border: 1px #DDD solid;margin-bottom: 15px;padding: 1px;}
 		
 		@keyframes consoleCount {from{transform: translateY(-100%);}to{transform: translateY(0);}}
-		.count-planel-console {position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: #38393D;z-index: 100;padding: 30px;overflow: auto;transition: transform 0.25s ease-out;;animation: consoleCount 0.25s ease-out;display: none;z-index: 1000;}
+		.count-planel-console {position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: rgba(56,57,61, 0.97);z-index: 100;padding: 30px;overflow: auto;transition: transform 0.25s ease-out;;animation: consoleCount 0.25s ease-out;display: none;z-index: 1000;}
 		.count-planel-console p {font-size: 18px;font-style: italic;text-decoration: underline;margin: 0;}
 		.count-planel-console .ul-container {display: inline-block;}
 		.count-planel-console ul {float: left;position: relative !important;margin-right: 60px !important;}
@@ -35,6 +35,18 @@
 		.tools ul li {background-color: #31363D;color: white;border-radius: 50%;height: 58px;width: 58px;position: relative;cursor: pointer;user-select: none;margin: 22px 0;box-shadow: 0px 0px 5px #31363d;}
 		.tools ul li img:active {opacity: 0.75;}
 		.tools ul li img {position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);width: 30px;height: 30px;}
+		
+		.level-title {
+			position: absolute;
+			z-index: 100;
+			top: 10px;
+			left: 50%;
+			transform: translateX(-50%);
+			color: red;
+			font-size: 18px;
+			color: #DDDDDD;
+			font-style: italic;
+		}
 	</style>
 	
 	<body>

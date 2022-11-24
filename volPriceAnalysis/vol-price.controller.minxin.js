@@ -58,13 +58,11 @@ var $volPriceControllerMinxin = {
 				},
 				xAxis: {
 					data: xAxisData,
-					name:'价格',
 					nameLocation: 'end',
 					nameRotate: 45,
 					type: 'category',
 				},
 				yAxis: {
-					name: '',
 					type: 'value',
 					nameLocation: 'end',
 					nameRotate: 45,
@@ -74,7 +72,7 @@ var $volPriceControllerMinxin = {
 				grid: {
 					width: 'auto',
 					left: '12%',
-					right: '6%',
+					right: '3%',
 					bottom: 60,
 				},
 				legend: {
@@ -91,7 +89,12 @@ var $volPriceControllerMinxin = {
 					axisPointer:{
 						type: 'cross', // 十字准星指示器
 					},
-					formatter: function(params, ticket) {
+					position:function (pos, params, el, elRect, size) {
+					  var obj = { top: 10 };
+					  obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 30;
+					  return obj;
+					},
+					formatter:function(params, ticket) {
 						var div = document.createElement('div');
 						
 						// 时间
@@ -99,7 +102,7 @@ var $volPriceControllerMinxin = {
 						var dataIndex = params[0].dataIndex;
 						var levelData = _this.levelTimes[time][dataIndex];
 						
-						if(_this.form.kLineType == 'day') {
+						if(time == 'day') {
 							time = moment(levelData['date']).format('周E');
 						}else {
 							time = moment(levelData['date']).format('HH:mm');
@@ -140,7 +143,7 @@ var $volPriceControllerMinxin = {
 					{ type: 'slider', start: this.datazoomIndex[0],end: this.datazoomIndex[1], moveHandleSize: 8,height:20,bottom: 15, },
 				],
 				brush:{
-					toolbox: ['rect', 'lineX', 'lineY'],
+					toolbox: ['rect', 'keep', 'clear'],
 				},
 				toolbox:{
 					show: true,
@@ -153,9 +156,10 @@ var $volPriceControllerMinxin = {
 							onclick:function(params, chart){
 								var element = chart.getDom();
 								_this.fullpage(element);
-								var chartInstance = echarts.getInstanceByDom(element);
-								setTimeout(function() { chartInstance.resize() }, 120)
 							},
+						},
+						magicType:{
+							type: ['stack']
 						},
 						dataView: {},
 					}
@@ -208,6 +212,10 @@ var $volPriceControllerMinxin = {
 				var chartBarId = 'vol-chart-bar-' + level;
 				var chartLineId = 'vol-chart-line-' + level;
 				
+				var levelTitle = document.createElement('div');
+				levelTitle.setAttribute('class', 'level-title');
+				levelTitle.innerText = level + ' Minute';
+				
 				if(level == 'day' && this.onceDay) {
 					var dayBar = document.querySelector('#' + chartBarId);
 					dayBar ? dayBar.parentNode.removeChild(dayBar) : '';
@@ -222,10 +230,12 @@ var $volPriceControllerMinxin = {
 					volChartBar = document.createElement('div');
 					volChartBar.setAttribute('class', 'chart-box');
 					volChartBar.setAttribute('id', 'vol-chart-bar-' + level);
+					volChartBar.innerHTML = '<div class="level-title">'+level+'</div>';
 					
 					document.getElementById("chart-wrapper").appendChild(volChartBar);
 					echarts.init(volChartBar);
 					this.echartsEvent(volChartBar);
+					volChartBar.appendChild(levelTitle.cloneNode(true));
 				}
 				
 				
@@ -238,6 +248,7 @@ var $volPriceControllerMinxin = {
 					document.getElementById("chart-wrapper").appendChild(volChartLine);
 					echarts.init(volChartLine);
 					this.echartsEvent(volChartLine);
+					volChartLine.appendChild(levelTitle.cloneNode(true));
 				}
 			}
 		},

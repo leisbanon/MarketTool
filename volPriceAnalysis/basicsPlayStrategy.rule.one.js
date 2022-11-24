@@ -44,7 +44,7 @@ var $basicsPlayStrategyRule = {
 			var _this = this;
 			// 组合所有交易数据 “收盘价” 队列
 			var xAxis_closePriceList = chartdata.map(function(item) {
-				return Number(item['close']);
+				return moment(item['date']).format('HH:mm');
 			});
 			
 			// 所有交易数据 “成交量” 队列

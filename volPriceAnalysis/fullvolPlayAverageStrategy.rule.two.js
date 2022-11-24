@@ -24,12 +24,13 @@ var $fullvolPlayAverageStrategyRule = {
 		 * 全量博弈加权均值
 		 */
 		executeFullvolPlayAverageStrategy:function(chartdata, key) {
+			console.log(chartdata);
 			var _this = this;
 			this._symbolChartKey = key;
 			_this.reseFullvolPlay();
 			
 			this.xAxis_closePriceList = chartdata.map(function(item) {
-				return Number(item['close']);
+				return moment(item['date']).format('HH:mm');
 			});
 			
 			for(var i = 0;i < chartdata.length;i++) {
