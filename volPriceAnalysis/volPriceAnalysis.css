@@ -1,0 +1,32 @@
+#app { margin-left: 28px; }
+.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 23px 0;}
+
+.chart-wrapper {display: flex;justify-content: space-around;background-color: white;border-radius: 6px;flex-wrap: wrap;padding: 15px 0px;}
+.chart-wrapper .chart-box {height: 265px;width: 47.5%;border-radius: 4px;border: 1px #DDD solid;margin-bottom: 15px;padding: 1px;}
+
+@keyframes consoleCount {from{transform: translateY(-100%);}to{transform: translateY(0);}}
+.count-planel-console {position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: rgba(56,57,61, 0.94);z-index: 100;padding: 30px;overflow: auto;transition: transform 0.25s ease-out;;animation: consoleCount 0.25s ease-out;display: none;z-index: 99999991;}
+.count-planel-console p {font-size: 18px;font-style: italic;text-decoration: underline;margin: 0;}
+.count-planel-console .ul-container {display: inline-block;}
+.count-planel-console ul {float: left;position: relative !important;margin-right: 60px !important;}
+.count-planel-console ul li {transform: scale(0.98);}
+.console-close {width: 22px;height: 22px;position: absolute;right: 60px;top: 30px;cursor: pointer;}
+.console-close:active {opacity: 0.85;}
+
+.footer-buttons {margin: 15px 0 15px 30px;}
+.footer-lines {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.65);margin-top: 29px;}
+.footer-buttons button {color: #6495ED;padding: 0 15px;cursor: pointer;font-family: cursive;font-size: 18px;}
+
+
+@keyframes toolsFrames{from{transform: translateX(-100%);}to{transform: translateX(0);}}
+.tools {position: fixed;height: 100%;width: 100px;top: 0;bottom: 0;left: 0;transform: translateX(-95px);transition: transform 0.3s ease-out;z-index: 1000;cursor: pointer;padding-right: 50px;}
+.tools ul {position: relative;list-style: none;margin: 0;padding: 0;display: flex;flex-direction: column;align-items: center;justify-content: center;height: 100%;}
+.tools ul li {background-color: #31363D;color: white;border-radius: 50%;height: 58px;width: 58px;position: relative;cursor: pointer;user-select: none;margin: 22px 0;box-shadow: 0px 0px 5px #31363d;flex-shrink: 0;}
+.tools ul li img:active {opacity: 0.75;}
+.tools ul li img {position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);width: 30px;height: 30px;}
+
+.level-title {position: absolute;z-index: 100;top: 10px;left: 50%;transform: translateX(-50%);color: red;font-size: 18px;color: #CCC;font-style: italic;}
+.console-header {text-align: center;font-size: 26px;margin-bottom: 2px;}
+.console-header .datetime {color: rgba(128,128,128,1);font-size: 16px;}
+
+.time-handle-button {margin-left: 21px !important;height: 21px !important;font-size: 14px !important;color: #555 !important;padding: 0 7px !important;}

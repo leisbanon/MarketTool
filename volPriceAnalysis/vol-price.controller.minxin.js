@@ -85,14 +85,10 @@ var $volPriceControllerMinxin = {
 					show: true,
 					trigger: 'axis',
 					// alwaysShowContent: true,
+					// showContent:false,
 					hideDelay: 300,
 					axisPointer:{
-						type: 'cross', // 十字准星指示器
-					},
-					position:function (pos, params, el, elRect, size) {
-					  var obj = { top: 10 };
-					  obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 30;
-					  return obj;
+						type: 'cross',
 					},
 					formatter:function(params, ticket) {
 						var div = document.createElement('div');
@@ -115,22 +111,23 @@ var $volPriceControllerMinxin = {
 						var amountCount = _this.formatAmountText(levelData.amountCount);
 						
 						var boxList = [
-							{ 'text': moment(levelData['date']).format('YY-MM-DD'), value: time, color: 'rgb(255,167,0)' },
-							{ 'text': '开盘价', value: levelData.open },
-							{ 'text': '最高价', value: levelData.max },
-							{ 'text': '最低价', value: levelData.min },
-							{ 'text': '收盘价', value: levelData.close },
-							{ 'text': '涨跌幅', value: levelData.diffRate + '%' },
-							{ 'text': '成交量', value: volumnCount },
-							{ 'text': '总金额', value: amountCount },
+							{ 'text': moment(levelData['date']).format('YY-MM-DD'), value: time, color: 'rgb(255, 69, 0)' },
+							{ 'text': '收盘', value: levelData.close, color: 'rgb(255, 69, 0)' },
+							{ 'text': '开盘', value: levelData.open, color: 'rgb(255, 69, 0)' },
+							{ 'text': '昨收', value: levelData.yesterdayClose, color: 'rgb(255, 69, 0)' },
+							{ 'text': '最高', value: levelData.max },
+							{ 'text': '最低', value: levelData.min },
+							{ 'text': '成交量', value: volumnCount, marginRight: '0' },
+							// { 'text': '涨跌幅', value: levelData.diffRate + '%' },
+							// { 'text': '总金额', value: amountCount,  },
 						]
 						
 						var ul = document.createElement('ul');
-						ul.style="font-size: 14px;margin: 0;padding: 0;list-style: none;";
+						ul.style="font-size: 15px;margin: 0;padding: 0;list-style: none;display: flex;";
 						for(var item of boxList) {
 							var li = document.createElement('li');
-							li.style="font-size: 14px;margin-bottom: 7px;width: 68px;";
-							li.innerHTML = '<span style="text-decoration: underline;display: block;font-weight: 400;font-style: italic;">'+item.text+'</span><span style="display: block;text-align: right;color:'+item.color+'">'+item.value+'</span>'
+							li.style="font-size: 14px;margin-bottom: 0px;text-align: center;margin-right:"+(item.marginRight || '28px')+";";
+							li.innerHTML = '<span style="margin-bottom: 6px;text-decoration: underline;display: block;font-weight: 400;font-style: italic;">'+item.text+'</span><span style="display: block;color:'+item.color+'">'+item.value+'</span>'
 							ul.appendChild(li);
 						}
 						
@@ -169,6 +166,9 @@ var $volPriceControllerMinxin = {
 			};
 			
 			// 合并配置项
+			if(series[0].type == 'bar') {
+				baseOption.tooltip.showContent = false;
+			}
 			Object.assign(baseOption, assginConfigOption);
 			// console.log('baseOption => ' + JSON.stringify(baseOption))
 			
@@ -208,7 +208,7 @@ var $volPriceControllerMinxin = {
 		},
 		// 动态创出可视化图表
 		createEcharts:function() {
-			for(var level of this.levelIndex) {
+			for(var level of Object.keys(this.levelIndex)) {
 				var chartBarId = 'vol-chart-bar-' + level;
 				var chartLineId = 'vol-chart-line-' + level;
 				
@@ -216,7 +216,7 @@ var $volPriceControllerMinxin = {
 				levelTitle.setAttribute('class', 'level-title');
 				levelTitle.innerText = level + ' Minute';
 				
-				if(level == 'day' && this.onceDay) {
+				if(!this.levelIndex[level]) {
 					var dayBar = document.querySelector('#' + chartBarId);
 					dayBar ? dayBar.parentNode.removeChild(dayBar) : '';
 					

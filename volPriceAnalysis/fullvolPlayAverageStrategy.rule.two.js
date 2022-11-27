@@ -4,8 +4,10 @@ var $fullvolPlayAverageStrategyRule = {
 			riseLimit: 0.1, // 最大上涨幅度限制 10% 
 			_symbolChartKey: '', // 标识当前创建图表视图的键值
 			
-			xAxis_closePriceList:[], // 组合所有交易数据 “收盘价” 队列
-			yAxis_volDataList: { // 组合所有交易数据 “成交量” 队列
+			dayAveragePriceDateList:[], // 组合所有交易数据 “日内平均价” 队列
+			
+			xAxis_dateList: [], // X轴，组合所有交易数据 “日期” 队列
+			yAxis_volDataList: { // Y轴，组合所有交易数据 “成交量” 队列
 				buyVolumns: [],
 				sellVolumns: [],
 			}
@@ -14,7 +16,7 @@ var $fullvolPlayAverageStrategyRule = {
 	methods:{
 		reseFullvolPlay:function() {
 			var _this = this;
-			this.xAxis_closePriceList = [];
+			this.xAxis_dateList = [];
 			
 			Object.keys(_this.yAxis_volDataList).forEach(function(key) {
 				_this.yAxis_volDataList[key] = [];
@@ -24,31 +26,39 @@ var $fullvolPlayAverageStrategyRule = {
 		 * 全量博弈加权均值
 		 */
 		executeFullvolPlayAverageStrategy:function(chartdata, key) {
-			console.log(chartdata);
+			// console.log(JSON.stringify(chartdata));
 			var _this = this;
 			this._symbolChartKey = key;
 			_this.reseFullvolPlay();
 			
-			this.xAxis_closePriceList = chartdata.map(function(item) {
-				return moment(item['date']).format('HH:mm');
+			this.xAxis_dateList = chartdata.map(function(item) {
+				if(key == 'day') {
+					return moment(item['date']).format('MM-DD');
+				}else {
+					return moment(item['date']).format('HH:mm');
+				}
+			});
+			
+			this.dayAveragePriceDateList = chartdata.map(function(item) {
+				return (Number(item['max']) + Number(item['min'])) / 2;
 			});
 			
 			for(var i = 0;i < chartdata.length;i++) {
 				var item = chartdata[i];
 				
-				var minPrice = item['min'];
-				var maxPrice = item['max'];
-				var openPrice = item['open'];
-				var closePrice = item['close'];
-				var vol = item['volumn'];
+				var minPrice = Number(item['min']);
+				var maxPrice = Number(item['max']);
+				var openPrice = Number(item['open']);
+				var closePrice = Number(item['close']);
+				var vol = Number(item['volumn']);
 				var date = item['date'];
-				var yesterdayClose = item['yesterdayClose']; // 昨日收盘价
-				var diffRate = item['diffRate']; // 涨跌幅
+				var yesterdayClose = Number(item['yesterdayClose']); // 昨日收盘价
+				var diffRate = Number(item['diffRate']); // 涨跌幅
 				
 				// 涨停价
-				var riseLimitPrice = (Number(yesterdayClose) + (yesterdayClose * this.riseLimit) - 0.01).toFixed(2);
+				var riseLimitPrice = Number((yesterdayClose + (yesterdayClose * this.riseLimit) - 0.01).toFixed(2));
 				// 跌停价
-				var downLimitPrice = (Number(yesterdayClose) - (yesterdayClose * this.riseLimit) + 0.01).toFixed(2);
+				var downLimitPrice = Number((yesterdayClose - (yesterdayClose * this.riseLimit) + 0.01).toFixed(2));
 				
 				var createRuleData = function() {
 					// A. 一字板涨停，后续所有的量为主动性买入，成交归纳为主动性卖出；
@@ -90,8 +100,8 @@ var $fullvolPlayAverageStrategyRule = {
 					
 					var buyVol = (vol * clBuyRate /  100).toFixed(2);
 					var sellVol = (vol - buyVol).toFixed(2);
-					_this.yAxis_volDataList.buyVolumns.push(buyVol);
-					_this.yAxis_volDataList.sellVolumns.push(sellVol);
+					_this.yAxis_volDataList.buyVolumns.push(Number(buyVol));
+					_this.yAxis_volDataList.sellVolumns.push(Number(sellVol));
 				}
 				createRuleData();
 			}
@@ -107,7 +117,7 @@ var $fullvolPlayAverageStrategyRule = {
 						name: value,
 						type: type,
 						stack: type == 'bar',
-						itemStyle:{ }
+						itemStyle:{ },
 					}
 					
 					if(value == '多方买盘') {
@@ -125,7 +135,7 @@ var $fullvolPlayAverageStrategyRule = {
 				var chartNode = document.querySelector('#' + selectId);
 				if(chartNode) {
 					var chartInstance = echarts.getInstanceByDom(chartNode);
-					_this.loadCharts(chartInstance, _this.xAxis_closePriceList, series);
+					_this.loadCharts(chartInstance, _this.xAxis_dateList, series);
 				}
 			}
 			loaddata('bar');
@@ -135,6 +145,7 @@ var $fullvolPlayAverageStrategyRule = {
 		// 多级别成交量博弈总量比计算
 		addLevelDataCount_2:function(type) {
 			// console.log('Two Strategy Count Compute =>' + type);
+			// console.log(JSON.stringify(this.dayAveragePriceDateList))
 			
 			var solidVolCount = 0;
 			var solidAmountCount = 0;
@@ -148,25 +159,25 @@ var $fullvolPlayAverageStrategyRule = {
 			// 成交量统计
 			for(var index = 0;index < this.yAxis_volDataList['sellVolumns'].length;index++) {
 				var value = this.yAxis_volDataList['sellVolumns'][index];
-				solidVolCount += Number(value);
-				solidAmountCount += value * this.xAxis_closePriceList[index]
+				solidVolCount += value;
+				solidAmountCount += value * this.dayAveragePriceDateList[index] / 100;
 			}
 			
 			for(var index = 0;index < this.yAxis_volDataList['buyVolumns'].length;index++) {
 				var value_2 = this.yAxis_volDataList['buyVolumns'][index];
-				hollowVolCount += Number(value_2);
-				hollowAmountCount += value_2 * this.xAxis_closePriceList[index]
+				hollowVolCount += value_2;
+				hollowAmountCount += value_2 * this.dayAveragePriceDateList[index] / 100;
 			}
 			
 			// 多空成交量比率
-			volSymbolRate = ((hollowVolCount - solidVolCount) / solidVolCount * 100).toFixed(2);
+			volSymbolRate = ((hollowVolCount - solidVolCount) / hollowVolCount * 100).toFixed(2);
 			// 多空成交额比率
-			amountSymbolRate = ((hollowAmountCount - solidAmountCount) / solidAmountCount * 100).toFixed(2);
+			amountSymbolRate = ((hollowAmountCount - solidAmountCount) / hollowAmountCount * 100).toFixed(2);
 			
 			this.levelPlayingCount.push({
 				type: type,
 				count:{
-					size: this.xAxis_closePriceList.length,
+					size: this.xAxis_dateList.length,
 					solidVolCount: solidVolCount,
 					solidAmountCount: solidAmountCount,
 					

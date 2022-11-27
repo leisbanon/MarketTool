@@ -10,13 +10,19 @@ var $volPriceToolsMinxin = {
 		// Screen Fullpage
 		screenfull.onchange(function(params) {
 			_this.zoomCharts();
-			if(screenfull.isFullscreen && screenfull.element.getAttribute('id') == 'chart-wrapper') {
-				screenfull.element.style.overflow = 'auto';
-			}else {
-				screenfull.element.style.overflow = 'hidden';
+			var classname = params.srcElement.getAttribute('class');
+			var id = params.srcElement.getAttribute('id');
+			
+			if(id && id.indexOf('line') == -1 && classname && classname.indexOf('chart-box') != -1) {
+				var chartInstance = echarts.getInstanceByDom(params.srcElement);
+				chartInstance.setOption({
+					tooltip:{
+						showContent: screenfull.isFullscreen
+					}
+				});
 			}
 		})
-		
+				
 		// Tools
 		var toolsNode = document.getElementById("tools");
 		toolsNode.addEventListener('mouseenter', function() {
@@ -30,13 +36,14 @@ var $volPriceToolsMinxin = {
 		document.addEventListener('keyup',function(event) {
 			// console.log(event.keyCode);
 			
+			// T
 			if(event.keyCode == 84) {
 				_this.toogleStrategy();
 				return;
 			}
 			
-			// C
-			if(event.keyCode == 67) {
+			// A
+			if(event.keyCode == 65) {
 				_this.toogleConsole();
 				return;
 			}
@@ -69,8 +76,7 @@ var $volPriceToolsMinxin = {
 		},
 		// 全屏
 		fullpage:function(el) {
-			el = el ? el : document.getElementById("chart-wrapper");
-			screenfull.toggle(el);
+			el instanceof Element ? screenfull.toggle(el): screenfull.toggle();
 		},
 		// 显示 Console
 		toogleConsole:function() {

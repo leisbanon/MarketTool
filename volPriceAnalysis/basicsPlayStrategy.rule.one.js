@@ -15,6 +15,7 @@ var $basicsPlayStrategyRule = {
 		 * playSymbolStatus -> 空方博弈结果状态标识符
 		 */
 		executeBasicsPlayStrategy:function(chartdata, key) {
+			debugger;
 			this._symbolChartKey = key;
 			this.reseBasicscPlay();
 			
@@ -25,7 +26,7 @@ var $basicsPlayStrategyRule = {
 					continue;
 				}
 				// 当日收盘价小于开盘价
-				if(item['close'] - item['open'] <= 0) {
+				if(item['close'] - item['open'] <= 0 && item['max'] != item['close']) {
 					item['playSymbolStatus'] = -1;
 					continue;
 				}
@@ -44,7 +45,11 @@ var $basicsPlayStrategyRule = {
 			var _this = this;
 			// 组合所有交易数据 “收盘价” 队列
 			var xAxis_closePriceList = chartdata.map(function(item) {
-				return moment(item['date']).format('HH:mm');
+				if(this._symbolChartKey == 'day') {
+					return moment(item['date']).format('MM-DD');
+				}else {
+					return moment(item['date']).format('HH:mm');
+				}
 			});
 			
 			// 所有交易数据 “成交量” 队列
@@ -95,7 +100,6 @@ var $basicsPlayStrategyRule = {
 		},
 		// 多级别成交量博弈总量比计算
 		addLevelDataCount:function(chartdata, type) {
-			// console.log('One Strategy Count Compute =>' + type);
 			var solidVolCount = 0;
 			var solidAmountCount = 0;
 			
@@ -116,9 +120,9 @@ var $basicsPlayStrategyRule = {
 			}
 			
 			// 多空成交量比率
-			volSymbolRate = ((hollowVolCount - solidVolCount) / solidVolCount * 100).toFixed(2);
+			volSymbolRate = (hollowVolCount > 0 ? (hollowVolCount - solidVolCount) / hollowVolCount * 100 : -100).toFixed(2);
 			// 多空成交额比率
-			amountSymbolRate = ((hollowAmountCount - solidAmountCount) / solidAmountCount * 100).toFixed(2);
+			amountSymbolRate = (hollowAmountCount > 0 ? (hollowAmountCount - solidAmountCount) / hollowAmountCount * 100 : -100).toFixed(2);
 			
 			this.levelPlayingCount.push({
 				type: type,
