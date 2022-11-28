@@ -24,6 +24,7 @@
 		.yesterday-playing:active {opacity: 0.8;}
 		
 		.data-tip {color: rgba(221,221,221,0.65);font-size: 18px;font-style: italic;}
+		.symbol {position: absolute;height: 60px;width: 60px;background-color: rgb(255, 69, 0, 0.4);top: 0;border-radius: 50%;left: 50%;transform: translateX(-60%);}
 	</style>
 	
 	<body>
@@ -88,16 +89,27 @@
 					<ol class="excel-request-list">
 						<li v-for="(item,index) in renderList" :key="index">
 							<span style="width: 210px;" class="orange-color">名称：{{ item.name }}（{{ item.code }}）</span>
+							
 							<span style="width: 120px;">昨收：{{ item.yesterdayClose }}</span>
+							
 							<span style="width: 120px;">开盘：{{ item.openPrice }}</span>
-							<span style="width: 120px;">最新：<span class="orange-color">{{ item.closePrice }}</span></span>
+							
+							<span style="width: 120px;position: relative;">最新：
+								<span class="orange-color">{{ item.closePrice }}</span>
+								<div class="symbol" v-if="item.closePrice <= excelStrategyPositionPrices(item)"></div>
+							</span>
+							
 							<span>策略位率：<input class="excel-strategy-input" :value="item.strategyRate" type="number" @input="eStrategyInputChange($event, index)" style="width: 65px;"/> %</span>
 							
 							<div class="result">
 								<span>日期：{{ moment(item.date).format('MM/DD') }}</span>
+								
 								<span>跳空涨幅：{{ diffRateCompute(item.openPrice, item.yesterdayClose) }}%</span>
+								
 								<span style="text-decoration: underline;">最新涨幅：<span :style="{marginRight: '0', color: diffRateCompute(item.closePrice, item.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ diffRateCompute(item.closePrice, item.yesterdayClose) }}%</span></span>
+								
 								<span>相对策略位价：<span style="color: #FF4500;margin-right: 0;">{{ excelStrategyPositionPrices(item) }}</span></span>
+								
 								<span @click="openPlayingWin(item)" class="yesterday-playing">查看昨日博弈<img src="../static/icon/right.png"></span>
 							</div>
 							<div class="middle-line" style="margin: 18px 0;"></div>

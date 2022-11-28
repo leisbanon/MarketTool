@@ -152,20 +152,24 @@ var $dayHighGapBuyStrategy = {
 					});
 					
 					_this.excelTables = newList;
-					_this.renderList.splice(0, _this.renderList.length);
 					_this.iterationFetch();
 				};
 				reader.readAsBinaryString(files[0]);
 			}
+			
+			_this.renderList.splice(0, _this.renderList.length);
+			this.noMainBoard = 0;
 			eachReadyFile();
 		},
 		// 刷新
 		refresh:function() {
 			this.renderList.splice(0, this.renderList.length);
+			this.noMainBoard = 0;
 			this.iterationFetch();
 		},
 		// 重置
 		resetFile:function() {
+			this.noMainBoard = 0;
 			this.excelTables.splice(0, this.excelTables.length);
 			this.renderList.splice(0, this.renderList.length);
 			document.getElementById('excel_file').value = '';
