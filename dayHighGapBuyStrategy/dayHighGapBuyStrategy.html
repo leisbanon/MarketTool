@@ -67,6 +67,8 @@
 					<span class="one-result"  :style="{ textDecoration: 'underline', color: diffRateCompute(resForm.closePrice, resForm.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'  }">最新涨幅：{{ diffRateCompute(resForm.closePrice, resForm.yesterdayClose) }}%</span>
 					
 					<span class="red-color one-result">相对策略位价：{{ strategyPositionPrice() }}</span>
+					
+					<span class="one-result yesterday-playing" @click="openPlayingWin({date:form.date, code:form.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
 				</div>
 			</div>
 			
@@ -74,10 +76,10 @@
 				<h2>Excel 输入遍历：</h2>
 				
 				<div class="box">
-					<form style="display: inline-block;padding: 7px;border: 1px #888 solid;width: 800px;">
+					<form enctype="multipart/form-data" style="display: inline-block;padding: 7px;border: 1px #888 solid;width: 800px;">
 						<label>
 							请选择需要导入的 Excel 个股数据：
-							<input type="file" id="excel_file" ref="excel_file" accept=".xls,.xlsx" @change="handleFiles(event.target)" style="width: 350px;"/>
+							<input type="file" id="excel_file" ref="excel_file" accept=".txt" @change="handleFiles(event.target)" style="width: 350px;"/>
 						</label>
 						<span class="clear-text-button" @click="refresh" style="float: right;margin-left: 32px;color: white;text-decoration: underline;">刷新</span>
 						<span class="clear-text-button" @click="resetFile" style="float: right;color: white;text-decoration: underline;">删除</span>

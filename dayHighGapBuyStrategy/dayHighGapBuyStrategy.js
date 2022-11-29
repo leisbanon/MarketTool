@@ -103,46 +103,44 @@ var $dayHighGapBuyStrategy = {
 			var eachReadyFile = function() {
 				let reader = new FileReader();
 				reader.onload = function(e) {
-					var workbook = XLSX.read(e.target.result, {type: 'binary'});
-					var _sheetNames = workbook.SheetNames
-					var _sheets = workbook.Sheets[_sheetNames];
-					// console.log(JSON.stringify(_sheets));
+					var results = e.target.result.split('\n');
+					var date = results[0].replace(/\r/g, '');
+					var titles = results[1].replace(/\s/g, '').split(',');
+					var stocks = results.filter(function(item, index) {
+						// 0: Date, 1: Header
+						if(item && index != 0 && index != 1) { 
+							return item.split(',')
+						};
+					});
 					
-					// 日期
-					var date = _sheets['E1'].w;
-					date = date.split('\n')[1].replace(/\./g, '-');
-					
-					// 处理为 Array
-					var index = {
-						'A': 'code',
-						'B': 'name',
-						'H': 'hightRate', // 高开幅
+					var keys = {
+						"自选股": { key: 'name' },
+						"代码": { key: 'code' }
 					}
-					var indexKeys = Object.keys(index);
-					var excelTables = [];
-					for(var key in _sheets) {
-						var iKey = key.substr(0,1);
-						var iValue = key.substr(1, key.toString().length);
-						if(iKey == 'A') {
-							if(indexKeys.includes(iKey) && Object.prototype.toString.call(_sheets[key]) === '[object Object]') {
-								var _stockObject = new Object();
-								indexKeys.forEach(function(vkey) {
-									if(iValue != 1) {
-										_stockObject[index[vkey]] = _sheets[vkey + iValue].w;
-										// _stockObject.date = date;
-									}
-								});
-								(_stockObject.name && !['undefined', 'false', 'null'].includes(_stockObject.name)) ? excelTables.push(_stockObject) : '';
-								continue;
+					
+					Object.keys(keys).forEach(function(keyname) {
+						for(var index in titles) {
+							if(titles[index].search(keyname) != -1) {
+								keys[keyname]['baseIndex'] = index;
+								break;
 							}
 						}
+					});
+					
+					var stockList = new Array();
+					for(var item of stocks) {
+						var stockObject = new Object();
+						var list = item.replace(/\s/g, '').split(',');
+						Object.keys(keys).forEach(function(keyname) {
+							stockObject[keys[keyname]['key']] = list[keys[keyname]['baseIndex']]
+						})
+						stockList.push(stockObject);
 					}
 					
 					// 数组组合处理
-					var newList = excelTables.filter(function(item) {
+					var newList = stockList.filter(function(item) {
 						var code = item.code;
 						if(['6', '0'].includes(code.substr(0, 1))) {
-							item.code = code.substr(0, 6);
 							item.date = date;
 							return item;
 						}else {
@@ -151,10 +149,12 @@ var $dayHighGapBuyStrategy = {
 						}
 					});
 					
+					// console.log(newList)
+					
 					_this.excelTables = newList;
 					_this.iterationFetch();
 				};
-				reader.readAsBinaryString(files[0]);
+				reader.readAsText(files[0], 'gb2312');
 			}
 			
 			_this.renderList.splice(0, _this.renderList.length);
