@@ -81,7 +81,7 @@
 				<span class="red-color">Stop Loss Sell：</span><br/>
 				<sub>日内触及止损位卖出策略</sub>
 				<ol class="describe sell-strategy-ol">
-					<li>执行亏损比：5.33%；</li>
+					<li>执行亏损比：3.33%；</li>
 				</ol>
 			</div>
 			
@@ -94,16 +94,21 @@
 					<span>{{ formatMoney(onceSellAllCompute()) }}</span>
 				</div>
 				
+				<span>分仓选择：</span>
+				<select v-model="levelSpace">
+					<option v-for="(value,index) in [90, 80, 70, 50, 30]" :value="value" :key="value">{{ value }}% 先仓</option>
+				</select>
+				
 				<div id="stratery-container">
-					<ul class="blocks" v-for="count in 3">
-						<li class="red-color" style="font-size: 22px;">({{ count + 1}}分之1)先仓出货：</li>
+					<ul class="blocks">
+						<li class="red-color" style="font-size: 22px;">{{ levelSpace }}% 先仓出货：</li>
 						<!-- 先仓 -->
 						<li>
 							<div class="orange-color">先仓：</div>
 							<div>
-								<span>{{ uad.openingPrice }} * {{ stockParseInt(count) }} * {{ uad.rate }}%</span>
+								<span>{{ uad.openingPrice }} * {{ getLevelSpaceRate() }} * {{ uad.rate }}%</span>
 								<span>=</span>
-								<span>{{ formatMoney(firstStockCompute(count)) }}</span>
+								<span>{{ formatMoney(firstSpaceCompute()) }}</span>
 							</div>
 						</li>
 						
@@ -112,22 +117,22 @@
 							<div class="orange-color">后仓：</div>
 							<div class="after-list">
 								<div v-for="number in floatRates">
-									<span>{{ uad.openingPrice }} * {{ uad.vol - stockParseInt(count) }} * </span>
+									<span>{{ uad.openingPrice }} * {{ uad.vol - getLevelSpaceRate() }} * </span>
 									<span title="涨跌幅" :class="number >= 0 ? 'red-color' : 'green-color'">{{ number }}%</span>
 									<span>=</span>
-									<span>{{ formatMoney(afterStockCompute(count, number)) }}</span>
+									<span>{{ formatMoney(afterSpaceCompute( number)) }}</span>
 									
 									<ul class="data-view">
-										『<span>实际盈利：{{ formatMoney(afterStockCompute(count, number), false) }} + {{ formatMoney(firstStockCompute(count), false) }} - </span>
-										<span class="green-color" title="手续费（双边计算）：佣金 + 印花税">{{ poundageCompute(count, number).toFixed(2) }}</span>
+										『<span>实际盈利：{{ formatMoney(afterSpaceCompute(number), false) }} + {{ formatMoney(firstSpaceCompute(), false) }} - </span>
+										<span class="orange-color" title="手续费（双边计算）：佣金 + 印花税">{{ poundageCompute(number).toFixed(2) }}</span>
 										<span>=</span>
-										<span class="red-color">{{ formatMoney(afterStockCompute(count, number) + firstStockCompute(count) - poundageCompute(count, number)) }}</span>』
+										<span :class="factLucre(number) >= 0 ? 'red-color' : 'green-color'">{{ formatMoney(factLucre(number), false) }}</span>』
 										
 										<span class="data-view-block"></span>
-										『<span>单次全仓差：{{ formatMoney(afterStockCompute(count, number) + firstStockCompute(count) - poundageCompute(count, number), false) }} - </span>
+										『<span>单次全仓差：{{ formatMoney(afterSpaceCompute(number) + firstSpaceCompute() - poundageCompute(number), false) }} - </span>
 										<span>{{ formatMoney(onceSellAllCompute(), false) }}</span>
 										<span>≈</span>
-										<span class="red-color">{{ formatMoney(afterStockCompute(count, number) + firstStockCompute(count) - poundageCompute(count, number) - onceSellAllCompute()) }}</span>』
+										<span>{{ formatMoney(onceFacelLucreDiff(number), false) }}</span>』
 									</ul>
 								</div>
 							</div>
@@ -148,19 +153,20 @@
 			mixins:[$commonMinxin],
 			data() {
 				return {
+					levelSpace: 70, // 分仓选择
+					
 					floatRates:[
-						-5.33, -4.5, -4, -3.5,
-						-3, -2.5, -2, -1.5, -1, -0.5, 0,
-						0.5, 1, 1.5, 2,
-						2.5, 3, 3.5, 4,
-						4.5, 5, 5.5, 6,
-						7, 8, 9, 10,
+						-5.33, -4.33, -4.33, -3.33,
+						-2.33, -1.33, -1, -0.5, -0.33, 0,
+						0.33, 0.5, 1, 1.33,
+						2.33, 3.33, 4.33, 5.33,
+						6.33, 7.33, 8.33, 9.33, 10,
 					],
 					
 					uad:{
 						openingPrice: 10,
 						vol: 1000,
-						rate: 2,
+						rate: 2.33,
 						closingPrice: '/',
 					},
 				}
@@ -169,32 +175,40 @@
 				
 			},
 			methods:{
+				// 当次全仓差额
+				onceFacelLucreDiff:function(number) {
+					return this.afterSpaceCompute(number) + this.firstSpaceCompute() - this.poundageCompute(number) - this.onceSellAllCompute();
+				},
+				// 实际盈利
+				factLucre:function(number) {
+					return this.afterSpaceCompute(number) + this.firstSpaceCompute() - this.poundageCompute(number);
+				},
 				// 单次全仓卖出结果计算
 				onceSellAllCompute:function() {
 					return this.uad.openingPrice * this.uad.vol * (this.uad.rate / 100);
 				},
 				// 先仓出货结果计算
-				firstStockCompute:function(count) {
-					return this.uad.openingPrice * this.stockParseInt(count) * (this.uad.rate / 100);
+				firstSpaceCompute:function() {
+					return this.uad.openingPrice * this.getLevelSpaceRate() * (this.uad.rate / 100);
 					
 				},
 				// 后仓出货结果计算
-				afterStockCompute:function(count, number) {
-					return this.uad.openingPrice * (this.uad.vol - this.stockParseInt(count)) * (number / 100);
+				afterSpaceCompute:function(number) {
+					return this.uad.openingPrice * (this.uad.vol - this.getLevelSpaceRate()) * (number / 100);
 				},
 				// 手续费；
-				poundageCompute(count, number) {
+				poundageCompute(number) {
 					// 买入佣金
 					var buyCommission = this.uad.openingPrice * this.uad.vol * 0.0002;
 					buyCommission = buyCommission > 5 ? buyCommission : 5;
 					
 					// 卖出佣金一（先仓）
-					var sellAmountFrist = this.uad.openingPrice * this.stockParseInt(count);
+					var sellAmountFrist = this.uad.openingPrice * this.getLevelSpaceRate();
 					var sellCommissionFrist = (sellAmountFrist + (sellAmountFrist * this.uad.rate / 100)) * 0.0002;
 					sellCommissionFrist = sellCommissionFrist > 5 ? sellCommissionFrist : 5;
 					
 					// 卖出佣金二（后仓）
-					var sellAmountAfter = this.uad.openingPrice * (this.uad.vol - this.stockParseInt(count));
+					var sellAmountAfter = this.uad.openingPrice * (this.uad.vol - this.getLevelSpaceRate());
 					var sellCommissionAfter = (sellAmountAfter + (sellAmountAfter * number / 100)) * 0.0002;
 					sellCommissionAfter = sellCommissionAfter > 5 ? sellCommissionAfter : 5;
 					
@@ -219,10 +233,19 @@
 					return serveAmoountCount;
 				},
 				/**
-				 * 仓位股数取整
+				 * 获取分仓比例
 				 */
-				stockParseInt:function(count) {
-					return Number.parseInt(this.uad.vol * 1 / (count + 1) / 100) * 100
+				getLevelSpaceRate:function() {
+					var levelCount = this.uad.vol * this.levelSpace / 100;
+					var levelRem = levelCount % 100;
+					
+					if(levelRem == 0) {
+						return levelCount;
+					}else if(levelRem >= 50) {
+						return levelCount + 100 - levelRem;
+					}else {
+						return levelCount - levelRem;
+					}
 				},
 				/**
 				 * 格式化金额

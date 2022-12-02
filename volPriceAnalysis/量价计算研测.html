@@ -40,7 +40,7 @@
 					
 					<button type="button" @click="afterDate(1)" class="time-handle-button">后一天</button>
 					
-					<span>&emsp;结束时间：{{ form.endTime }}</span>
+					<span>&emsp;结束时间：{{ endTime }}</span>
 				</div>
 				
 				<div class="box">
@@ -148,7 +148,6 @@
 						code: '',
 						days:0, // 指定查询的天数
 						beginTime:'', // 开始时间
-						endTime:'', // 结束时间
 						kLineType: '5',
 						strategyType:'STRATEGY_TWO', // STRATEGY_ONE | STRATEGY_TWO
 						
@@ -170,13 +169,15 @@
 			computed:{
 				panelDate:function() {
 					var start = moment(this.form.beginTime).format("MM月DD");
-					var end = moment(this.form.endTime).format("MM月DD");
-					return !(this.form.onceDay.toString == 'true') ? (start+ ' —— ' + end) : moment(this.form.beginTime).format("YYYY-MM-DD");
+					var end = moment().format("MM月DD");
+					return (this.form.onceDay.toString() == 'true') ? moment(this.form.beginTime).format("YYYY-MM-DD") : (start+ ' —— ' + end);
+				},
+				endTime:function() {
+					return moment().format("YYYY-MM-DD");
 				}
 			},
 			mounted:function() {
 				var _this = this;
-				this.form.endTime = moment().format('YYYY-MM-DD'); 
 				this.form.beginTime = moment().subtract(this.form.days, 'days').format('YYYY-MM-DD');
 				
 				this.createEcharts();
@@ -255,8 +256,9 @@
 					// debugger;
 					
 					var form = this.form;
-					if(!form.endTime || (!form.days && !form.beginTime)) {
+					if(!form.code || !form.beginTime) {
 						alert('全局值设定参数不完整');
+						_this.toggleLoading(false);
 						return;
 					}
 					
@@ -319,18 +321,16 @@
 				// 开始时间变动时触发
 				onDateChange:function(e) {
 					var _start = moment(e.target.value);
-					var _end = moment(this.form.endTime);
-					this.form.days = _end.diff(_start, 'day');
+					this.form.days = moment().diff(_start, 'day');
 				},
 				afterDate:function(number) {
 					this.form.beginTime = moment(this.form.beginTime).add(number, 'days').format('YYYY-MM-DD');
 					
-					var _end = moment(this.form.endTime);
-					this.form.days = _end.diff(this.form.beginTime, 'day');
+					this.form.days = moment().diff(this.form.beginTime, 'day');
 				},
 				// 指定查询天数变化时
 				onDayChange:function(e) {
-					this.form.beginTime = moment(this.form.endTime).subtract(e.target.value, 'days').format('YYYY-MM-DD');
+					this.form.beginTime = moment().subtract(e.target.value, 'days').format('YYYY-MM-DD');
 					this.reset()
 				},
 				// 按键监听
