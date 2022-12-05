@@ -42,7 +42,19 @@
 					<span>&emsp;日&emsp;期：</span>
 					<input type="date" v-model="form.date" placeholder="请输入查询日期" @change="onFormChange"/>
 					
-					<button type="button" @click="startFetch" style="margin-left: 18px;">查询</button>
+					<span>&emsp;选择策略：</span>
+					<select v-model="strategyType" style="width: 148px;" @change="strategyTypeChange">
+						<option value="strategyOne">策略一</option>
+						<option value="strategyTwo">策略二（昨日涨停）</option>
+					</select>
+					
+					<span title="基础涨幅差额率">&emsp;策略位率：</span>
+					<input type="number" v-model="strategyPositionRate"  style="width: 65px;"/> %
+					
+					<div style="display: inline-block;" v-if="strategyType == 'strategyTwo'">
+						<span>&emsp;涨停：</span>
+						<input type="number" v-model="mostRateCount" style="width: 65px;" placeholder="个数" /> 板
+					</div>
 				</div>
 				
 				<div class="box">
@@ -52,21 +64,27 @@
 					<span>&emsp;开盘价：</span>
 					<input type="number" v-model="resForm.openPrice" />
 					
-					<span>&emsp;最新价：</span>
+					<span>&emsp;最高价：</span>
+					<input type="number" v-model="resForm.maxPrice" />
+					
+					<span>&emsp;最&nbsp;新&nbsp;价：</span>
 					<input type="number" v-model="resForm.closePrice" />
 					
-					<span title="基础涨幅差额率">&emsp;策略位率：</span>
-					<input type="number" v-model="strategyPositionRate"  style="width: 65px;"/> %
+					<button type="button" @click="startFetch" style="margin-left: 18px;">查询</button>
 				</div>
 				
 				<div class="middle-line"></div>
 				
 				<div class="box">
-					<span class="one-result">跳空涨幅：{{ diffRateCompute(resForm.openPrice, resForm.yesterdayClose) }}%</span>
+					<span class="one-result">
+						coreHighRate：
+						<span v-if="strategyType == 'strategyOne'">{{ diffRateCompute(resForm.openPrice, resForm.yesterdayClose) }}%</span>
+						<span v-if="strategyType == 'strategyTwo'">{{ diffRateCompute((Number(resForm.openPrice) + Number(resForm.maxPrice)) / 2, resForm.yesterdayClose) }}%</span>
+					</span>
 					
 					<span class="one-result"  :style="{ textDecoration: 'underline', color: diffRateCompute(resForm.closePrice, resForm.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'  }">最新涨幅：{{ diffRateCompute(resForm.closePrice, resForm.yesterdayClose) }}%</span>
 					
-					<span class="red-color one-result">相对策略位价：{{ strategyPositionPrice() }}</span>
+					<span class="red-color one-result">{{ strategyType == 'strategyOne' ? '相对' : '绝对'}}策略位价：{{ strategyPositionCompute() }}</span>
 					
 					<span class="one-result yesterday-playing" @click="openPlayingWin({date:form.date, code:form.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
 				</div>
@@ -136,7 +154,9 @@
 			],
 			data() {
 				return {
+					strategyType: 'strategyTwo', // strategyOne, strategyTwo
 					strategyPositionRate: 33,
+					mostRateCount: 1, // 涨停个数
 					
 					form: { // 请求结果数据
 						code:'', // 股票代码
@@ -150,7 +170,7 @@
 						closePrice: 0,
 						
 						yesterdayDate: '', // 昨日日期
-						yesterdayClose: '' // 昨日收盘
+						yesterdayClose: 0, // 昨日收盘
 					},
 				}
 			},
@@ -158,20 +178,68 @@
 				this.form.date = window.moment().format('YYYY-MM-DD');
 			},
 			methods:{
-				// 相对策略位
-				strategyPositionPrice:function() {
-					if(this.resForm.yesterdayClose && this.resForm.openPrice) {
-						console.log('----------------------------')
-						var opRate = this.diffRateCompute(this.resForm.openPrice, this.resForm.yesterdayClose);
-						var strategyRate = opRate - (opRate * this.strategyPositionRate / 100);
-						console.log('opRate => ' + opRate + '%');
-						console.log('strategyRate => ' + strategyRate + '%');
+				// 策略位计算
+				strategyPositionCompute:function() {
+					if(this.strategyType == 'strategyOne') {
+						return this.strategyPositionPriceOne();
+					}else if(this.strategyType == 'strategyTwo') {
+						return this.strategyPositionPriceTwo();
+					}
+				},
+				/**
+				 * 绝对策略位
+				 * 1. 以昨日涨停（或非）收盘价为绝对参考值
+				 */
+				strategyPositionPriceTwo:function() {
+					if(this.resForm.yesterdayClose && this.resForm.openPrice && this.resForm.maxPrice) {
+						console.log('---------- Strategy Two ----------');
+						var openMaxPriceAverage = (Number(this.resForm.openPrice) + Number(this.resForm.maxPrice)) / 2;
+						var gapHighRate = this.diffRateCompute(openMaxPriceAverage, this.resForm.yesterdayClose);
+						console.log('gapHighRate => ' + gapHighRate + '%');
 						
-						// 回归位价
-						var flybackPrice = this.resForm.openPrice - (this.resForm.openPrice * opRate / 100);
-						// 策略位价
-						var strategyPrice = flybackPrice - (flybackPrice * strategyRate / 100);
+						// 回归位价 = 昨日收盘价（涨停价）
+						var flybackPrice = this.resForm.yesterdayClose;
 						console.log('回归位价 => ' + flybackPrice);
+						
+						var fpSubtractionHigh = gapHighRate > 0 ? flybackPrice - (flybackPrice * gapHighRate / 100) : flybackPrice;
+						console.log('fpSubtractionHigh => ' + fpSubtractionHigh);
+						
+						// 策略位率：以昨日涨停10%为基础幅度，指定下跌关键的百分比率：strategyPositionRate，从而得到计算策略位价的百分比率
+						var strategyRate = 10 - (10 * this.strategyPositionRate / 100);
+						console.log('strategyRate => ' + strategyRate + '%');
+						// 策略位价 -> 根据涨停板个数逐次回踩跌幅：strategyPositionRate
+						var strategyPrice = fpSubtractionHigh;
+						for(var i = 0;i < this.mostRateCount;i++) {
+							strategyPrice = strategyPrice - (strategyPrice * strategyRate / 100);
+						}
+						console.log('策略位价 => ' + strategyPrice);
+						return strategyPrice.toFixed(2);
+					}
+					
+				},
+				/**
+				 * 相对策略位
+				 * 1. 以当日跳空（非）收盘价为相对参考值
+				 */
+				strategyPositionPriceOne:function() {
+					if(this.resForm.yesterdayClose && this.resForm.openPrice) {
+						console.log('---------- Strategy One ----------');
+						var gapHighRate = this.diffRateCompute(this.resForm.openPrice, this.resForm.yesterdayClose);
+						console.log('gapHighRate => ' + gapHighRate + '%');
+						
+						// 回归位价，从开盘价回踩到缺口百分比率
+						var flybackPrice = this.resForm.openPrice - (this.resForm.openPrice * gapHighRate / 100);
+						// 如果 gapHighRate <=0，回归位价等于收盘价
+						gapHighRate <= 0 ? flybackPrice = this.resForm.openPrice : '';
+						console.log('回归位价 => ' + flybackPrice);
+						
+						
+						// 策略位率：在缺口的基础百分比率的基础上再次下跌指定关键的百分比率，从而得到计算策略位价的百分比率（附加/重合跌幅值）
+						var strategyRate = Math.abs(gapHighRate) - (Math.abs(gapHighRate) * this.strategyPositionRate / 100);
+						// 如果 gapHighRate <=0，策略位率等于6.7%
+						gapHighRate <= 0 ? strategyRate = 6.7 : '';
+						console.log('strategyRate => ' + strategyRate + '%');
+						var strategyPrice = flybackPrice - (flybackPrice * strategyRate / 100);
 						console.log('策略位价 => ' + strategyPrice);
 						return strategyPrice.toFixed(2);
 					}
@@ -232,6 +300,9 @@
 					if(event.keyCode == 13) {
 						this.startFetch()
 					}
+				},
+				strategyTypeChange:function() {
+					
 				},
 			}
 		})

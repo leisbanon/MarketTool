@@ -52,7 +52,15 @@
 				<input type="number" v-model="uad.closingPrice" placeholder="请输入价格" />
 				
 				<span>&emsp;涨跌比：</span>
-				<input type="number" v-model="uad.rangeRatio" placeholder="请输入价格" />
+				<input type="number" v-model="uad.rangeRatio" placeholder="请输入涨跌幅" />
+			</div>
+			
+			<!-- Basic Number Rate -->
+			<div class="diff">
+				<h2 style="color: white;">Basic Number Rate：</h2>
+				<span><span class="orange-color">0.166% -> </span>{{ openPriceDefineRate(0.166) }}</span>
+				<span><span class="orange-color">&emsp;2.33% -> </span>{{ openPriceDefineRate(2.33) }}</span>
+				<span><span class="orange-color">&emsp;-5.33% -> </span>{{ openPriceDefineRate(-5.33) }}</span>
 			</div>
 			
 			<!-- 止损位计算 -->
@@ -64,7 +72,7 @@
 				<span>&emsp;止损位（盈）：</span>
 				<input type="number" v-model="uad.rangeRatio" placeholder="请输入涨跌位百分比" />
 				<span>-</span>
-				<button type="button" @click="onChangeFall">{{ uad.buttontext }}</button>
+				<button type="button" @click="onChangeFall">{{ uad.rangeRatio > 0 ? '跌' : '涨' }}</button>
 				
 				<span>&emsp;结果值：{{ lossCompute }}</span>
 			</div>
@@ -154,14 +162,13 @@
 			data() {
 				return {
 					uad:{
-						buttontext:'涨', // 涨跌
 						code:'', // 股票代码
 						date:window.moment().format('YYYY-MM-DD'), // 日期
 						
 						openingPrice:0, // 开盘价，成本价
 						closingPrice:0, // 收盘价，市场价
 						vol: '', // 成交量
-						rangeRatio:-5.33, // 涨跌比率
+						rangeRatio:2.33, // 涨跌比率
 						
 						minPrice:0, // 最低价
 						maxPrice:0, // 最高价
@@ -202,7 +209,7 @@
 				floatCompute:function() {
 					var result = (this.uad.closingPrice - this.uad.openingPrice) / this.uad.openingPrice * 100;
 					return (result || 0).toFixed(2);
-				}
+				},
 			},
 			methods:{
 				/**
@@ -273,15 +280,12 @@
 					}
 				},
 				onChangeFall() {
-					var buttontext = this.uad.buttontext;
-					if(buttontext == '涨') {
-						this.uad.buttontext = '跌';
+					if(this.uad.rangeRatio < 0) {
 						this.uad.rangeRatio = Math.abs(this.uad.rangeRatio);
 						return;
 					}
 					
-					if(buttontext == '跌') {
-						this.uad.buttontext = '涨';
+					if(this.uad.rangeRatio > 0) {
 						this.uad.rangeRatio = -Math.abs(this.uad.rangeRatio);
 						return;
 					}
@@ -292,6 +296,11 @@
 				formatMoney:function(money) {
 					return window.accounting.formatMoney(money, { symbol: '¥' })
 				},
+				// 开盘价指定涨跌幅度计算
+				openPriceDefineRate:function(rate) {
+					var result = Number(this.uad.openingPrice) + (this.uad.openingPrice * rate / 100)
+					return (result || 0).toFixed(2);
+				}
 			}
 		})
 	</script>
