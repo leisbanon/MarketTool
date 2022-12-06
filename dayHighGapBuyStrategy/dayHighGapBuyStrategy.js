@@ -3,7 +3,7 @@ var $dayHighGapBuyStrategy = {
 		return {
 			excelTables:[], // Excel 数据保存对象
 			// 页面渲染数据对象 
-			renderList: [{"code":"002932","name":"明德生物","date":"2022-11-22","diffRate":"-5.82","openPrice":"73.00","maxPrice":"73.00","closePrice":"67.00","strategyRate":33,"risePlateCount":1,"yesterdayClose":"71.14","_todayClose":"61.05","_todayInYesterdayClose":"66.56","_strategyPositionPrices":"64.64","_floatStrategyPositionPrices":"64.75","_afterDiffRate":"5.88","_currentRate":"-8.28","_coreHighRate":"2.61"},{"code":"002187","name":"广百股份","date":"2022-12-02","diffRate":"-2.56","openPrice":"8.99","maxPrice":"9.84","closePrice":"8.75","strategyRate":33,"risePlateCount":2,"yesterdayClose":"8.98","_todayClose":"8.01","_todayInYesterdayClose":"8.75","_strategyPositionPrices":"7.44","_floatStrategyPositionPrices":"7.45","_afterDiffRate":"-7.12","_currentRate":"-8.46","_coreHighRate":"4.84"}],
+			renderList: [],
 			
 			selectDaySize: 10, // 查询数据的范围
 			noMainBoard: 0, // 非主板个股数量
