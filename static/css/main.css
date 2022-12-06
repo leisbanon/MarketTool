@@ -1,4 +1,4 @@
-body { height: 100%;background-color: rgba(40,44,53,0.75);color: white; }
+body { height: 100%;background-color: rgba(40,44,53,0.75);color: white;}
 #app { margin: 50px 50px 100px 100px;font-family: cursive;white-space: nowrap; overflow: hidden;}
 #app .box { margin-bottom: 22px; }
 #app a { color: #6495ED; }
