@@ -5,27 +5,9 @@
 		<title>日内跳空高开交易策略</title>
 		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
 		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<link rel="stylesheet" type="text/css" href="./dayHighGapBuyStrategy.css"/>
 		<script src="../static/js/vue@v2.6.js"></script>
 	</head>
-	
-	<style>
-		.one-result {font-size: 19px !important;display: inline-block;margin-right: 70px;}
-		#app .box {margin-bottom: 28px;}
-		.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 23px 0;}
-		
-		.excel-request-list {}
-		.excel-request-list li span {display: inline-block;}
-		.excel-request-list li input {width: 65px;background-color: transparent;border: 1px white solid;color: white;border-left: none;border: none;border-bottom: 1px white solid;text-align: center;}
-		.excel-request-list li .result {margin-top: 12px;padding: 4px 10px;border-radius: 50px;display: table;background-color: white;color: #FF4500;}
-		.excel-request-list li .result span {margin-right: 33px;color: #222; }
-		
-		.yesterday-playing {color: #6495ED !important;display: inline-flex !important;align-items: center;justify-content: flex-start;cursor: pointer;user-select: none;}
-		.yesterday-playing img {transform: scaleX(.8);}
-		.yesterday-playing:active {opacity: 0.8;}
-		
-		.data-tip {color: rgba(221,221,221,0.65);font-size: 18px;font-style: italic;}
-		.symbol {position: absolute;height: 60px;width: 60px;background-color: rgb(255, 69, 0, 0.4);top: 0;border-radius: 50%;left: 50%;transform: translateX(-60%);}
-	</style>
 	
 	<body>
 		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
@@ -44,8 +26,8 @@
 					
 					<span>&emsp;选择策略：</span>
 					<select v-model="strategyType" style="width: 148px;" @change="strategyTypeChange">
-						<option value="strategyOne">策略一</option>
-						<option value="strategyTwo">策略二（昨日涨停）</option>
+						<option value="strategyOne">策略一（日内普通）</option>
+						<option value="strategyTwo">策略二（日内涨停）</option>
 					</select>
 					
 					<span title="基础涨幅差额率">&emsp;策略位率：</span>
@@ -64,7 +46,7 @@
 					<span>&emsp;开盘价：</span>
 					<input type="number" v-model="resForm.openPrice" />
 					
-					<span>&emsp;最高价：</span>
+					<span>&emsp;最&nbsp;高&nbsp;价：</span>
 					<input type="number" v-model="resForm.maxPrice" />
 					
 					<span>&emsp;最&nbsp;新&nbsp;价：</span>
@@ -94,7 +76,12 @@
 				<h2>Excel 输入遍历：</h2>
 				
 				<div class="box">
-					<form enctype="multipart/form-data" style="display: inline-block;padding: 7px;border: 1px #888 solid;width: 800px;">
+					<div>
+						<span>查询范围：</span>
+						<input type="number" v-model="selectDaySize" /> 天
+					</div><br />
+					
+					<form enctype="multipart/form-data" style="display: inline-block;padding: 7px;border: 1px #888 solid;width: 85%;">
 						<label>
 							请选择需要导入的 Excel 个股数据：
 							<input type="file" id="excel_file" ref="excel_file" accept=".txt" @change="handleFiles(event.target)" style="width: 350px;"/>
@@ -106,35 +93,50 @@
 				
 				<div class="box" style="position: relative;">
 					<span style="position: absolute;top: -22px;font-size: 13px;color: #DDDDDD;opacity: 0.65;">总数：{{ renderList.length }}；非主板个股：{{ noMainBoard }}</span>
-					<ol class="excel-request-list">
-						<li v-for="(item,index) in renderList" :key="index">
-							<span style="width: 210px;" class="orange-color">名称：{{ item.name }}（{{ item.code }}）</span>
-							
-							<span style="width: 120px;">昨收：{{ item.yesterdayClose }}</span>
-							
-							<span style="width: 120px;">开盘：{{ item.openPrice }}</span>
-							
-							<span style="width: 120px;position: relative;">最新：
-								<span class="orange-color">{{ item.closePrice }}</span>
-								<div class="symbol" v-if="item.closePrice <= excelStrategyPositionPrices(item)"></div>
-							</span>
-							
-							<span>策略位率：<input class="excel-strategy-input" :value="item.strategyRate" type="number" @input="eStrategyInputChange($event, index)" style="width: 65px;"/> %</span>
-							
-							<div class="result">
-								<span>日期：{{ moment(item.date).format('MM/DD') }}</span>
+					<div class="files-request-list">
+						<ol>
+							<li v-for="(item,index) in renderList" :key="index">
+								<div class="c-header">
+									<span>
+										{{ index + 1}}
+										名称：<font class="orange-color">{{ item.name }}（{{ item.code }}）</font>
+										<font class="plate-text">{{ item.plate }}</font>
+									</span>
+									
+									<span class="date">日期：{{ moment(item.date).format('MM/DD') }}</span>
+									<div class="middle-line"></div>
+								</div>
 								
-								<span>跳空涨幅：{{ diffRateCompute(item.openPrice, item.yesterdayClose) }}%</span>
+								<div class="c-body">
+									<div class="option">
+										<span>策略位率：<input class="list-input" :value="item.strategyRate"  type="text" @input="listStrategyRateChange($event, index)" />%</span>
+										<span>涨停：<input class="list-input" :value="item.risePlateCount"  type="text" @input="listRisePlateCountChange($event, index)" />板</span>
+										<span>coreHighRate：{{ diffRateCompute((Number(item.openPrice) + Number(item.maxPrice)) / 2, item.yesterdayClose) }}%</span>
+									</div>
+									
+									<div class="option">
+										<span>昨收：{{ item.yesterdayClose }}</span>
+										<span>开盘价：{{ item.openPrice }}</span>
+										<span>最高价：{{ item.maxPrice }}</span>
+									</div>
+									
+									<div class="option">
+										<span>最新：<font class="orange-color">{{ item._todayClose }}</font></span>
+										<span>最新涨幅：<font :style="{color: diffRateCompute(item._todayClose, item._todayInYesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ diffRateCompute(item._todayClose, item._todayInYesterdayClose) }}%</font></span>
+										
+										<span>剩余差幅：<font :style="{color: afterDiffRate(item) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ afterDiffRate(item) }}%</font></span>
+										<div class="middle-line"></div>
+									</div>
+								</div>
 								
-								<span style="text-decoration: underline;">最新涨幅：<span :style="{marginRight: '0', color: diffRateCompute(item.closePrice, item.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ diffRateCompute(item.closePrice, item.yesterdayClose) }}%</span></span>
-								
-								<span>相对策略位价：<span style="color: #FF4500;margin-right: 0;">{{ excelStrategyPositionPrices(item) }}</span></span>
-								
-								<span @click="openPlayingWin(item)" class="yesterday-playing">查看昨日博弈<img src="../static/icon/right.png"></span>
-							</div>
-							<div class="middle-line" style="margin: 18px 0;"></div>
-						</li>
-					</ol>
+								<div class="c-footer">
+									<span class="red-color">绝对策略位价：{{ excelStrategyPositionPrices(item) }} <sub>Float：{{ floatStrategyPositionPrices(item) }}</sub></span>
+									<span class="yesterday-playing" @click="openPlayingWin({ date:item.date, code:item.code })">查看昨日博弈<img src="../static/icon/right.png"></span>
+									<div v-if="afterDiffRate(item) > 0" class="symbol">√</div>
+								</div>
+							</li>
+						</ol>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -188,31 +190,43 @@
 				},
 				/**
 				 * 绝对策略位
-				 * 1. 以昨日涨停（或非）收盘价为绝对参考值
+				 * @param { Object } paramForm Require compute params
+				 * @param {Object} strategyPositionRate 策略率
+				 * @param {Object} mostRateCount 涨板数
 				 */
-				strategyPositionPriceTwo:function() {
-					if(this.resForm.yesterdayClose && this.resForm.openPrice && this.resForm.maxPrice) {
-						console.log('---------- Strategy Two ----------');
-						var openMaxPriceAverage = (Number(this.resForm.openPrice) + Number(this.resForm.maxPrice)) / 2;
-						var gapHighRate = this.diffRateCompute(openMaxPriceAverage, this.resForm.yesterdayClose);
-						console.log('gapHighRate => ' + gapHighRate + '%');
+				strategyPositionPriceTwo:function(paramForm, strategyPositionRate, mostRateCount) {
+					var resForm = paramForm || this.resForm;
+					var strategyPositionRate = strategyPositionRate || this.strategyPositionRate;
+					var mostRateCount = mostRateCount || this.mostRateCount;
+					
+					var consoleLog = function(text) {
+						if(typeof paramForm == 'undefined') {
+							console.log(text);
+						}
+					}
+					
+					if(resForm.yesterdayClose && resForm.openPrice && resForm.maxPrice) {
+						consoleLog('---------- Strategy Two ----------');
+						var openMaxPriceAverage = (Number(resForm.openPrice) + Number(resForm.maxPrice)) / 2;
+						var gapHighRate = this.diffRateCompute(openMaxPriceAverage, resForm.yesterdayClose);
+						consoleLog('gapHighRate => ' + gapHighRate + '%');
 						
 						// 回归位价 = 昨日收盘价（涨停价）
-						var flybackPrice = this.resForm.yesterdayClose;
-						console.log('回归位价 => ' + flybackPrice);
+						var flybackPrice = resForm.yesterdayClose;
+						consoleLog('回归位价 => ' + flybackPrice);
 						
 						var fpSubtractionHigh = gapHighRate > 0 ? flybackPrice - (flybackPrice * gapHighRate / 100) : flybackPrice;
-						console.log('fpSubtractionHigh => ' + fpSubtractionHigh);
+						consoleLog('fpSubtractionHigh => ' + fpSubtractionHigh);
 						
 						// 策略位率：以昨日涨停10%为基础幅度，指定下跌关键的百分比率：strategyPositionRate，从而得到计算策略位价的百分比率
-						var strategyRate = 10 - (10 * this.strategyPositionRate / 100);
-						console.log('strategyRate => ' + strategyRate + '%');
+						var strategyRate = 10 - (10 * strategyPositionRate / 100);
+						consoleLog('strategyRate => ' + strategyRate + '%');
 						// 策略位价 -> 根据涨停板个数逐次回踩跌幅：strategyPositionRate
 						var strategyPrice = fpSubtractionHigh;
-						for(var i = 0;i < this.mostRateCount;i++) {
+						for(var i = 0;i < mostRateCount;i++) {
 							strategyPrice = strategyPrice - (strategyPrice * strategyRate / 100);
 						}
-						console.log('策略位价 => ' + strategyPrice);
+						consoleLog('策略位价 => ' + strategyPrice);
 						return strategyPrice.toFixed(2);
 					}
 					

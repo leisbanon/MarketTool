@@ -1,0 +1,25 @@
+.one-result {font-size: 19px !important;display: inline-block;margin-right: 70px;}
+#app .box {margin-bottom: 28px;}
+.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 23px 0;}
+
+.yesterday-playing {color: #6495ED !important;display: inline-flex !important;align-items: center;justify-content: flex-start;cursor: pointer;user-select: none;}
+.yesterday-playing img {transform: scaleX(.8);}
+.yesterday-playing:active {opacity: 0.8;}
+
+.data-tip {color: rgba(221,221,221,0.65);font-size: 18px;font-style: italic;}
+.symbol {text-align: center;line-height: 60px;color: rgba(255,255,255,0.88);font-size: 45px;position: absolute;height: 60px;width: 60px;top: -55px;border-radius: 50%;left: 19%;z-index: -100;background-color: rgb(255, 69, 0, 0.4);}
+
+.files-request-list ol {margin: 0;padding: 0;display: flex;flex-wrap: wrap;list-style: none;}
+.files-request-list ol li {z-index: 100;border: 1px white solid;width: 480px;display: inline-block;background-color: white;color: #222;line-height: 28px;border-radius: 5px;padding: 3px 12px;margin-right: 29px;margin-bottom: 29px;}
+.files-request-list .c-body .option span {width: 160px;display: inline-block;font-size: 15px !important;color: rgba(34,34,34, 0.9)}
+.files-request-list .c-body .option span:last-child {width: auto;}
+
+.files-request-list .plate-text {color: #DDDDDD;font-style: italic;}
+.files-request-list .date {float: right;}
+.files-request-list .list-input {width: 32px !important;padding-left: 18px;background-color: transparent;border: 1px white solid;border-left: none;border: none;border-bottom: 1px #222 dotted;}
+.files-request-list .middle-line {margin: 7px 0;width: 100%;border-bottom: 1px rgba(40,44,53,0.75);border-bottom-style: dashed;}
+
+.files-request-list .c-footer {line-height: 33px;position: relative;}
+.files-request-list .c-footer span {font-size: 18px !important;}
+.files-request-list .c-footer .yesterday-playing {float: right;}
+.files-request-list .c-footer sub {color: rgba(255,167,0, 0.88);}
