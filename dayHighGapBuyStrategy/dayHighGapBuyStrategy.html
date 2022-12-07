@@ -66,7 +66,10 @@
 					
 					<span class="one-result"  :style="{ textDecoration: 'underline', color: diffRateCompute(resForm.closePrice, resForm.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'  }">最新涨幅：{{ diffRateCompute(resForm.closePrice, resForm.yesterdayClose) }}%</span>
 					
-					<span class="red-color one-result">{{ strategyType == 'strategyOne' ? '相对' : '绝对'}}策略位价：{{ strategyPositionCompute() }}</span>
+					<span class="red-color one-result">
+						{{ strategyType == 'strategyOne' ? '相对' : '绝对'}}策略位价：{{ strategyPositionCompute() }}
+						<sub v-if="strategyType == 'strategyTwo'" style="color: white;">{{ floatStrategyPositionPrices(resForm, strategyPositionRate, mostRateCount) }}</sub>
+					</span>
 					
 					<span class="one-result yesterday-playing" @click="openPlayingWin({date:form.date, code:form.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
 				</div>
