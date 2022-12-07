@@ -72,9 +72,9 @@
 				</div>
 			</div>
 			
+			<!-- 文件导入遍历 -->
 			<div class="diff">
-				<h2>Excel 输入遍历：</h2>
-				
+				<h2>文件导入遍历：</h2>
 				<div class="box">
 					<div>
 						<span>查询范围：</span>
@@ -83,19 +83,32 @@
 					
 					<form enctype="multipart/form-data" style="display: inline-block;padding: 7px;border: 1px #888 solid;width: 85%;min-width: 760px;">
 						<label>
-							请选择需要导入的 Excel 个股数据：
-							<input type="file" id="excel_file" ref="excel_file" accept=".txt" @change="handleFiles(event.target)" style="width: 350px;"/>
+							导入查询的数据：
+							<input type="file" id="selectImport" accept=".txt" @change="handleFiles(event.target)" style="width: 220px;"/>
 						</label>
-						<span class="clear-text-button" @click="refresh" style="float: right;margin-left: 32px;color: white;text-decoration: underline;">刷新</span>
-						<span class="clear-text-button" @click="resetFile" style="float: right;color: white;text-decoration: underline;">删除</span>
+						
+						<label>
+							导入保存的数据
+							<input type="file" id="saveImport" accept=".txt" @change="importCoreData(event.target)" style="width: 220px;"/>
+						</label>
+						
+						<span class="clear-text-button" @click="refresh()" style="float: right;margin-left: 32px;color: white;text-decoration: underline;">刷新</span>
+						<span class="clear-text-button" @click="resetList()" style="float: right;color: white;text-decoration: underline;">删除</span>
 					</form>
 				</div>
 				
-				<div class="box" style="position: relative;">
-					<span style="position: absolute;top: -22px;font-size: 13px;color: #DDDDDD;opacity: 0.65;">总数：{{ renderList.length }}；非主板个股：{{ noMainBoard }}</span>
+				<div class="box" style="position: relative;margin-bottom: 0;">
+					<div class="list-describe">
+						<span>总数：{{ excelTables.length }}</span>
+						<span>&emsp;非主板个股：{{ results.noMainBoard }}</span>
+						<span class="fetchFail" @click="coreConsoleAction('triggerStrategyInvalid')" style="color: rgb(255,167,0);">&emsp;已触发策略失效：{{ results.triggerStrategyInvalid.length }}</span>
+						<span class="fetchFail" @click="coreConsoleAction('noSearchInfo')">&emsp;未查询到涨板信息：{{ results.noSearchInfo.length }}</span>
+						<span class="fetchFail" @click="coreConsoleAction('requestFails')">&emsp;请求失败：{{ results.requestFails.length }}</span>
+					</div>
+						
 					<div class="files-request-list">
 						<ol>
-							<li v-for="(item,index) in renderList" :key="index">
+							<li v-for="(item,index) in results.renderList" :key="index">
 								<div class="c-header">
 									<span>
 										{{ index + 1}}
@@ -138,6 +151,60 @@
 						</ol>
 					</div>
 				</div>
+				
+				<div class="loading-wrapper" v-if="results.renderList.length > 0">
+					<img v-if="!results.loadingComplete" src="../static/icon/loading.png" class="loading-icon">
+					<span class="loading-text">{{ !results.loadingComplete ? '加载中...' : '加载完成'}}</span>
+				</div>
+			</div>
+			
+			<!-- 统计面板 -->
+			<div class="tools-in-count">
+				<div class="count-planel-console" id="console-count">
+					<div class="console-close"><img src="../static/icon/icon-close.png" @click="toogleConsole" width="100%" height="100%" /></div>
+					
+					<div class="number-rule-count" id="numberRuleCount">
+						<p class="orange-color">
+							<span v-if="renderConsoleSymbol == 'renderList'">Choice Core Data Count：</span>
+							<span v-if="renderConsoleSymbol == 'triggerStrategyInvalid'">已触发策略失效：</span>
+							<span v-if="renderConsoleSymbol == 'noSearchInfo'">未查询到涨板信息：</span>
+							<span v-if="renderConsoleSymbol == 'requestFails'">请求失败：</span>
+						</p><br />
+						
+						<div v-if="renderConsoleSymbol == 'renderList'">
+							<span class="orange-color">剩余差幅区间：Rate >= -</span> <input type="text" v-model="choiceDiffRate" style="width: 100px;"> %
+						</div>
+						
+						
+						<div class="data-list">
+							<ol>
+								<li style="width: 240px;" v-for="(item,index) in renderConsoleList">
+									<span>{{ index + 1}} 名称：{{ item.name }}（{{ item.code }}）</span>
+								</li>
+							</ol>
+							
+							<ol v-if="renderConsoleSymbol == 'renderList'">
+								<li v-for="(item,index) in renderConsoleList">
+									<div style="width: 170px;">剩余差幅：<font :style="{color: afterDiffRate(item) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ afterDiffRate(item) }}%</font></div>
+									<div style="width: 130px;">最新：<font class="orange-color">{{ item._todayClose }}</font></div>
+									<div style="width: 275px;">绝对策略位价：<font class="red-color">{{ excelStrategyPositionPrices(item) }}</font> <sub class="orange-color">Float：{{ floatStrategyPositionPrices(item) }}</sub></div>
+									<div style="width: 170px;">最新涨幅：<font :style="{color: diffRateCompute(item._todayClose, item._todayInYesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ diffRateCompute(item._todayClose, item._todayInYesterdayClose) }}%</font></div>
+									<div>日期{{ moment(item.date).format('MM/DD') }}</div>
+									<div><span class="yesterday-playing" @click="openPlayingWin({ date:item.date, code:item.code })">查看昨日博弈<img src="../static/icon/right.png"></span></div>
+								</li>
+							</ol>
+						</div>
+					</div>
+				</div>
+				
+				<!-- 工具 -->
+				<div class="tools" id="tools">
+					<ul>
+						<li title="统计数据（A）" @click="coreConsoleAction('renderList')"><img src="../static/icon/count.png"></li>
+						<li title="保存数据" @click="exportCoreData" style="transform: rotate(180deg);"><img src="../static/icon/save.png"></li>
+						<li title="页面顶部（T）" @click="backTop"><img src="../static/icon/top.png"></li>
+					</ul>
+				</div>
 			</div>
 		</div>
 	</body>
@@ -145,14 +212,20 @@
 	<script type="text/javascript" src="../static/js/xlsx.full.min.js"></script>
 	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/FileSaver.min.js" charset="utf-8"></script>
+	
 	<script type="text/javascript" src="../stockCommon.minxin.js" charset="utf-8"></script>
 	<script type="text/javascript" src="./dayHighGapBuyStrategy.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./dayHighGapBuyStrategyTools.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./writeRules.js" charset="utf-8"></script>
 	<script type="text/javascript">
 		var app = new Vue({
 			el: '#app',
 			mixins:[
 				$commonMinxin,
-				$dayHighGapBuyStrategy
+				$dayHighGapBuyStrategy,
+				$tools,
+				$writeRules,
 			],
 			data() {
 				return {

@@ -66,7 +66,12 @@ var $commonMinxin = {
 			var _catch = null;
 			var chainObject = {
 				then:function() { },
-				catch:function(fun) { _catch = fun },
+				catch:function(fun) { 
+					_catch = fun;
+					return {
+						finally:function(fun) { _finally = fun }
+					}
+				},
 				finally:function(fun) { _finally = fun }
 			}
 			

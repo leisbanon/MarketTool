@@ -1,15 +1,24 @@
 var $dayHighGapBuyStrategy = {
 	data:function() {
 		return {
+			filename: '',
+			selectDaySize: 15, // 查询数据的范围
 			excelTables:[], // Excel 数据保存对象
-			// 页面渲染数据对象 
-			renderList: [],
 			
-			selectDaySize: 10, // 查询数据的范围
-			noMainBoard: 0, // 非主板个股数量
+			results: {
+				renderList: [],
+				loadingComplete: true, // 是否加载完成
+				noMainBoard: 0, // 非主板个股数量
+				requestFails: [], // 请求失败的个股数据集
+				noSearchInfo: [], // 指定周期未查询到的数据计算
+				triggerStrategyInvalid: [], // 已触发策略失效的个股数据集
+			},
+			
+			originResults: {},
 		}
 	},
 	mounted:function() {
+		this.originResults = JSON.parse(JSON.stringify(this.results));
 	},
 	methods: {
 		// 查看昨日量价博弈
@@ -20,11 +29,11 @@ var $dayHighGapBuyStrategy = {
 		},
 		//  列表策略位率变更触发
 		listStrategyRateChange:function(event, index) {
-			this.renderList[index].strategyRate = event.target.value;
+			this.results.renderList[index].strategyRate = event.target.value;
 		},
 		// 列表涨板位变更触发
 		listRisePlateCountChange:function(event, index) {
-			this.renderList[index].risePlateCount = event.target.value;
+			this.results.renderList[index].risePlateCount = event.target.value;
 		},
 		// 剩余差幅
 		afterDiffRate:function(item) {
@@ -40,26 +49,6 @@ var $dayHighGapBuyStrategy = {
 		// 列表策略位价计算
 		excelStrategyPositionPrices:function(item) {
 			return this.strategyPositionPriceTwo(item, item.strategyRate, item.risePlateCount);
-		},
-		// 获取连续涨板的次数
-		getRisePlateCount:function(dataList, date) {
-			var _risePlateCount = 1;
-			var eachCounts = function(listIndex) {
-				var diffRate = dataList[listIndex].diffRate;
-				if(diffRate && Number(diffRate) >= 9.9) {
-					_risePlateCount += 1;
-					eachCounts(listIndex + 1);
-				}
-			}
-			
-			for(var index = 0;index < dataList.length;index++) {
-				var item = dataList[index];
-				if(moment(item.date).format('YYYY-MM-DD') == date) {
-					eachCounts(index + 1);
-					break;
-				}
-			}
-			return _risePlateCount;
 		},
 		// 迭代器
 		iterator:function(object, callback) {
@@ -78,9 +67,11 @@ var $dayHighGapBuyStrategy = {
 						item.diffRate = _this.diffRateCompute(item.close, yesterdayClose); // 当日涨跌幅
 						item.date = moment(item.time).format('YYYY-MM-DD');
 					}
-				})
+				});
 				
+				var basicInfo = { code: object.code,name: object.name };
 				var renderObject = new Object();
+				var isSearch = false;
 				for(var i = 0;i < dataList.length;i++) {
 					var item = dataList[i];
 					if(i != 0 && item.diffRate && Number(item.diffRate) >= 9.9) {
@@ -105,15 +96,25 @@ var $dayHighGapBuyStrategy = {
 							_todayInYesterdayClose: dataList[1].close,
 						});
 						
-						console.log(JSON.stringify(renderObject))
-						_this.renderList.push(renderObject);
+						// 输入录入规则
+						var isTriggerAtValid = _this.isTriggerStrategyPositionPrice(dataList, renderObject);
+						if(isTriggerAtValid) {
+							_this.results.renderList.push(renderObject);
+							setTimeout(function() { window.scrollTo(0, document.body.scrollHeight) }, 10)
+						}else {
+							_this.results.triggerStrategyInvalid.push(basicInfo);
+						}
+						
+						isSearch = true;
 						break;
 					}
 				}
 				
-				callback(true);
+				!isSearch ? _this.results.noSearchInfo.push(basicInfo) : '';
 			}).catch(function(message) {
-				alert(message);
+				_this.results.requestFails.push(basicInfo);
+			}).finally(function() {
+				callback();
 			})
 		},
 		// 迭代获取数据信息
@@ -122,31 +123,35 @@ var $dayHighGapBuyStrategy = {
 			eachIndex = eachIndex ? eachIndex : 0;
 			var object = this.excelTables[eachIndex];
 			if(object) {
-				dataMessage: 'Loading...',
+				this.results.loadingComplete = false;
 				this.iterator(object, function() {
 					eachIndex += 1;
-					_this.iterationFetch(eachIndex);
+					setTimeout(function() {
+						_this.iterationFetch(eachIndex);
+					}, 75)
 				});
 			}else {
 				// 结束数据处理
-				for(var item of _this.renderList) {
+				for(var item of _this.results.renderList) {
 					// 剩余差幅
 					item._afterDiffRate = _this.afterDiffRate(item);
 				}
 				
 				// Array Sort
-				this.renderList.sort(function(v1, v2) {
+				this.results.renderList.sort(function(v1, v2) {
 					return v2._afterDiffRate - v1._afterDiffRate;
 				})
 				
-				// console.log(JSON.stringify(_this.renderList))
+				this.results.loadingComplete = true;
+				console.log(JSON.stringify(_this.results.renderList))
 			}
 		},
 		// 读取文件
-		handleFiles:function(input) {
+		handleFiles:function(e) {
 			var _this = this;
-			var files = (input || document.getElementById("excel_file") ).files;
-			if(files.length == 0) { return };
+			var file = e.files[0];
+			if(!file) { return };
+			this.filename = file.name;
 			
 			var eachReadyFile = function() {
 				let reader = new FileReader();
@@ -187,38 +192,40 @@ var $dayHighGapBuyStrategy = {
 					// 数组组合处理
 					var newList = stockList.filter(function(item) {
 						var code = item.code;
-						if(['6', '0'].includes(code.substr(0, 1))) {
+						if(['60', '00'].includes(code.substr(0, 2))) {
 							return item;
 						}else {
-							_this.noMainBoard += 1;
+							_this.results.noMainBoard += 1;
 							return false;
 						}
 					});
 					
 					// console.log(JSON.stringify(newList));
-					
 					_this.excelTables = newList;
 					_this.iterationFetch();
+					document.getElementById("saveImport").value = '';
 				};
-				reader.readAsText(files[0], 'gb2312');
+				reader.readAsText(file, 'gb2312');
 			}
 			
-			_this.renderList.splice(0, _this.renderList.length);
-			this.noMainBoard = 0;
+			this.resetList('choice');
 			eachReadyFile();
 		},
 		// 刷新
 		refresh:function() {
-			this.renderList.splice(0, this.renderList.length);
-			this.noMainBoard = 0;
+			this.resetList('refresh');
 			this.iterationFetch();
 		},
 		// 重置
-		resetFile:function() {
-			this.noMainBoard = 0;
-			this.excelTables.splice(0, this.excelTables.length);
-			this.renderList.splice(0, this.renderList.length);
-			document.getElementById('excel_file').value = '';
+		resetList:function(symbol) {
+			for(var key in this.results) {
+				this.results[key] = JSON.parse(JSON.stringify(this.originResults[key]));
+			}
+			
+			if(!symbol) {
+				document.getElementById("selectImport").value = '';
+				document.getElementById("saveImport").value = '';
+			}
 		},
 	}
 }

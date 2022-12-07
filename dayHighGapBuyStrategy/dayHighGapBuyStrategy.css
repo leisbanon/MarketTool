@@ -1,5 +1,5 @@
 .one-result {font-size: 19px !important;display: inline-block;margin-right: 70px;}
-#app .box {margin-bottom: 28px;}
+#app .box {margin-bottom: 32px;}
 .middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 23px 0;}
 
 .yesterday-playing {color: #6495ED !important;display: inline-flex !important;align-items: center;justify-content: flex-start;cursor: pointer;user-select: none;}
@@ -9,10 +9,13 @@
 .data-tip {color: rgba(221,221,221,0.65);font-size: 18px;font-style: italic;}
 .symbol {text-align: center;line-height: 60px;color: rgba(255,255,255,0.88);font-size: 45px;position: absolute;height: 60px;width: 60px;top: -55px;border-radius: 50%;left: 19%;z-index: -100;background-color: rgb(255, 69, 0, 0.4);}
 
+
 .files-request-list ol {margin: 0;padding: 0;display: flex;flex-wrap: wrap;list-style: none;}
 .files-request-list ol li {z-index: 100;border: 1px white solid;width: 480px;display: inline-block;background-color: white;color: #222;line-height: 28px;border-radius: 5px;padding: 3px 12px;margin-right: 29px;margin-bottom: 29px;}
 .files-request-list .c-body .option span {width: 160px;display: inline-block;font-size: 15px !important;color: rgba(34,34,34, 0.9)}
 .files-request-list .c-body .option span:last-child {width: auto;}
+
+
 
 .files-request-list .plate-text {color: #DDDDDD;font-style: italic;}
 .files-request-list .date {float: right;}
@@ -23,3 +26,36 @@
 .files-request-list .c-footer span {font-size: 18px !important;}
 .files-request-list .c-footer .yesterday-playing {float: right;}
 .files-request-list .c-footer sub {color: rgba(255,167,0, 0.88);}
+
+
+@keyframes loadingKeyframe{from{transform: rotate(0deg);}to{transform: rotate(360deg);}}
+.loading-wrapper {text-align: center;height: 50px;display: flex;align-items: center;opacity: 0.8;}
+.loading-wrapper .loading-text {font-size: 18px;margin-right: 5px;width: 95px;font-style: italic;}
+.loading-wrapper .loading-icon {animation: loadingKeyframe 1.6s infinite;width: 17px;height: 17px;vertical-align: middle;}
+
+.list-describe {position: absolute;top: -27px;color: #DDDDDD;}
+.list-describe span {font-size: 13px !important;opacity: 0.65;}
+.list-describe .fetchFail {color: #6495ED;opacity: 1 !important;text-decoration: underline;cursor: pointer;user-select: none;}
+
+@keyframes consoleCount {from{transform: translateY(-100%);}to{transform: translateY(0);}}
+.count-planel-console {position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: rgba(56,57,61, 0.94);z-index: 100;padding: 30px;overflow: auto;transition: transform 0.25s ease-out;;animation: consoleCount 0.25s ease-out;display: none;z-index: 99999991;}
+.count-planel-console p {font-size: 18px;font-style: italic;text-decoration: underline;margin: 0;}
+.console-close {width: 22px;height: 22px;position: absolute;right: 60px;top: 30px;cursor: pointer;}
+.console-close:active {opacity: 0.85;}
+
+@keyframes toolsFrames{from{transform: translateX(-100%);}to{transform: translateX(0);}}
+.tools {position: fixed;height: 100%;width: 100px;top: 0;bottom: 0;left: 0;transform: translateX(-95px);transition: transform 0.3s ease-out;z-index: 1000;cursor: pointer;padding-right: 50px;}
+.tools ul {position: relative;list-style: none;margin: 0;padding: 0;display: flex;flex-direction: column;align-items: center;justify-content: center;height: 100%;}
+.tools ul li {background-color: #31363D;color: white;border-radius: 50%;height: 58px;width: 58px;position: relative;cursor: pointer;user-select: none;margin: 22px 0;box-shadow: 0px 0px 5px #31363d;flex-shrink: 0;}
+.tools ul li img:active {opacity: 0.75;}
+.tools ul li img {position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);width: 30px;height: 30px;}
+
+.number-rule-count ol li {height: 49px;line-height: 49px;position: relative;}
+.number-rule-count .data-list {display: flex;margin-top: 19px;}
+.number-rule-count .data-list ol {margin: 0;padding: 0;list-style: none;}
+.number-rule-count .data-list ol li {display: flex;position: relative;}
+.number-rule-count ol li::after {content: "";position: absolute;bottom: 0;left: 0;right: 0;border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.65);}
+.number-rule-count .data-list ol li div {}
+.number-rule-count .data-list ol:last-child li div:last-child {flex: 1;text-align: center;}
+.number-rule-count .data-list ol:first-child {user-select: all;}
+.number-rule-count .data-list ol:last-child {flex: 1;}
