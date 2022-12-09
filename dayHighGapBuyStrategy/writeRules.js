@@ -8,15 +8,16 @@ var $writeRules =  {
 	methods:{
 		// 判断是否已经触发绝对位价，相对触发涨幅空间：this.triggerStrategyRateMax %
 		isTriggerStrategyPositionPrice:function(dataList, renderObject) {
-			debugger;
-			var dataIndex = dataList.reverse().findIndex(function(item, index) {
+			// debugger;
+			var _dataList = JSON.parse(JSON.stringify(dataList)).reverse();
+			var dataIndex = _dataList.findIndex(function(item, index) {
 				return moment(item.date).format('YYYY-MM-DD') == renderObject.date;
 			});
 			
 			// 策略中日内 “最低价” 集合
-			var readyRangeMin = dataList.slice(dataIndex, dataList.length).map(function(item) { return Number(item.min) });
+			var readyRangeMin = _dataList.slice(dataIndex, _dataList.length).map(function(item) { return Number(item.min) });
 			// 策略中日内 “最高价” 集合
-			var readyRangeMax = dataList.slice(dataIndex, dataList.length).map(function(item) { return Number(item.max) });
+			var readyRangeMax = _dataList.slice(dataIndex, _dataList.length).map(function(item) { return Number(item.max) });
 			
 			// 策略位价
 			var strategyPrices = this.excelStrategyPositionPrices(renderObject);
@@ -36,7 +37,7 @@ var $writeRules =  {
 					// if(i == readyRangeMin.length) { break };
 					
 					dayMinPrice = value;
-					var rangeMaxSlices = readyRangeMax.slice(i + 1, dataList.length);
+					var rangeMaxSlices = readyRangeMax.slice(i + 1, _dataList.length);
 					dayMaxPrice = Math.max.apply(false, rangeMaxSlices.length > 0 ? rangeMaxSlices : [value]);
 					
 					diffMaxMinRate = this.diffRateCompute(dayMaxPrice, dayMinPrice);

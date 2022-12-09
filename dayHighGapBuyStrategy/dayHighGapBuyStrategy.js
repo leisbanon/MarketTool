@@ -103,6 +103,7 @@ var $dayHighGapBuyStrategy = {
 							_this.results.renderList.push(renderObject);
 							setTimeout(function() { window.scrollTo(0, document.body.scrollHeight) }, 10)
 						}else {
+							_this.onRunTest(dataList, renderObject);
 							_this.results.triggerStrategyInvalid.push(basicInfo);
 						}
 						
@@ -145,7 +146,7 @@ var $dayHighGapBuyStrategy = {
 				})
 				
 				this.results.loadingComplete = true;
-				console.log(JSON.stringify(_this.results.renderList))
+				console.log(JSON.stringify(_this.results.renderList));
 			}
 		},
 		// 读取文件
