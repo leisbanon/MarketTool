@@ -2,10 +2,11 @@ var $dayHighGapBuyStrategy = {
 	data:function() {
 		return {
 			filename: '',
-			selectDaySize: 15, // 查询数据的范围
+			selectDaySize: 23, // 查询数据的范围
 			excelTables:[], // Excel 数据保存对象
 			
 			results: {
+				requestCounts: 0, // 正在请求查询的总数
 				renderList: [],
 				loadingComplete: true, // 是否加载完成
 				noMainBoard: 0, // 非主板个股数量
@@ -59,6 +60,7 @@ var $dayHighGapBuyStrategy = {
 				beginDay: moment().subtract(_this.selectDaySize, 'days').format('YYYYMMDD'),
 			};
 			
+			var basicInfo = { code: object.code,name: object.name };
 			_this.fetchStockRealKlineData(params,function(data) {
 				var dataList = data.dataList;
 				dataList.forEach(function(item, index) {
@@ -69,7 +71,6 @@ var $dayHighGapBuyStrategy = {
 					}
 				});
 				
-				var basicInfo = { code: object.code,name: object.name };
 				var renderObject = new Object();
 				var isSearch = false;
 				for(var i = 0;i < dataList.length;i++) {
@@ -96,7 +97,7 @@ var $dayHighGapBuyStrategy = {
 							_todayInYesterdayClose: dataList[1].close,
 						});
 						
-						// 输入录入规则
+						// 置入规则
 						var isTriggerAtValid = _this.isTriggerStrategyPositionPrice(dataList, renderObject);
 						if(isTriggerAtValid) {
 							_this.results.renderList.push(renderObject);
@@ -124,6 +125,7 @@ var $dayHighGapBuyStrategy = {
 			var object = this.excelTables[eachIndex];
 			if(object) {
 				this.results.loadingComplete = false;
+				this.results.requestCounts += 1;
 				this.iterator(object, function() {
 					eachIndex += 1;
 					setTimeout(function() {

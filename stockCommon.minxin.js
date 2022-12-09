@@ -49,6 +49,22 @@ var $commonMinxin = {
 		})
 	},
 	methods:{
+		showToast:function(message) {
+			var toastEl = document.body.querySelector('#toast');
+			toastEl ? document.body.removeChild(toastEl) : '';
+			
+			var toast = document.createElement('div');
+			toast.setAttribute('class','toast');
+			toast.setAttribute('id','toast');
+			toast.innerHTML = message;
+			document.body.appendChild(toast);
+			
+			setTimeout(function() { document.body.removeChild(toast) }, 800)
+			
+			// toast component event stop propagation
+			toast.addEventListener('click',function(e) { e.stopPropagation() });
+			toast.addEventListener('touchstart',function(e) { e.stopPropagation() });
+		},
 		reset:function() {
 			this.stock.isRequest = false;
 		},

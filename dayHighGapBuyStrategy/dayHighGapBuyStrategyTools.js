@@ -1,7 +1,10 @@
 var $tools =  {
 	data: function() {
 		return {
-			choiceDiffRate: 5.33,
+			selectRange:{ // 选择范围
+				beginRate: 10,
+				endRate: -5.33,
+			},
 			
 			renderConsoleList: [],
 			renderConsoleSymbol: '',
@@ -34,17 +37,31 @@ var $tools =  {
 			}
 		})
 		
+		var pageInput = document.querySelectorAll('input');
+		for(var input of pageInput) {
+			var type = input.getAttribute('type');
+			if(!['date', 'file'].includes(type)) {
+				this.keyupEventListenerStop(input);
+			}
+		}
 	},
 	methods: {
-		coreConsoleAction:function(symbolKey) {
+		keyupEventListenerStop:function(input) {
+			input.addEventListener('keyup', function(event) {
+			if([84, 65].indexOf(event.keyCode) != -1) {
+					event.stopPropagation();
+				}
+			})
+		},
+		coreConsoleAction:function(symbolKey, action) {
 			var _this = this;
 			this.renderConsoleSymbol = symbolKey;
 			var datalist = this.results[symbolKey];
 			
 			if(symbolKey == 'renderList') {
 				datalist = datalist.filter(function(item) {
-					var restDiffRate = _this.afterDiffRate(item);
-					if(Number(restDiffRate) >= - _this.choiceDiffRate) {
+					var restDiffRate = Number(_this.afterDiffRate(item));
+					if(restDiffRate >= - Math.abs(_this.selectRange.endRate) && restDiffRate <= _this.selectRange.beginRate) {
 						return true;
 					}else {
 						return false;
@@ -52,8 +69,25 @@ var $tools =  {
 				});
 			}
 			
-			_this.toogleConsole();
+			action != 'change' ? _this.toogleConsole() : '';
 			this.renderConsoleList = datalist;
+		},
+		// 导出面板初选的数据
+		consoleExportCoreData:function() {
+			if(this.renderConsoleList.length == 0) {
+				alert('LIST DATA EMPEY...')
+				return;
+			}
+			
+			var day = moment().format('YYYYMMDD');
+			var title = document.querySelector('#numberRuleCount .title').innerText.replace(/[：,\n]/g, '');
+			var filename = this.filename + '【'+title+'】' + day
+			
+			var isPromptText = window.prompt('请输入文件名称: ', filename);
+			if(isPromptText) {
+				var blob = new Blob([JSON.stringify(this.renderConsoleList)], {type: "text/plain;charset=utf-8"});
+				saveAs(blob, isPromptText + ".txt");
+			}
 		},
 		// 导出保存加载的数据
 		exportCoreData:function() {
@@ -113,6 +147,21 @@ var $tools =  {
 			}else {
 				showConsole();
 			}
+		},
+		onRenderlistBoxClick:function(event) {
+			var nodes = document.querySelectorAll('.renderlist-box');
+			for(var node of nodes) {
+				node.style.backgroundColor = 'transparent';
+			}
+			event.currentTarget.style.backgroundColor = 'rgba(221, 221, 221, 0.2)';
+		},
+		copyStrategyPrice:function(event) {
+			var text = event.currentTarget.parentElement.querySelector('.strategy-text').innerText;
+			var clipboardInput = document.getElementById("clipboardInput");
+			clipboardInput.value = text;
+			clipboardInput.select();
+			document.execCommand('copy');
+			this.showToast('复制成功!');
 		},
 	}
 }

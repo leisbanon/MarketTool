@@ -11,6 +11,7 @@
 	
 	<body>
 		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		<input type="text" id="clipboardInput" style="opacity: 0;z-index: -1000;position: fixed;top: 0;">
 		
 		<div id="app">
 			<!-- 查询 -->
@@ -79,9 +80,17 @@
 			<div class="diff">
 				<h2>文件导入遍历：</h2>
 				<div class="box">
-					<div>
-						<span>查询范围：</span>
-						<input type="number" v-model="selectDaySize" /> 天
+					<div class="file-action">
+						<div>
+							<span>查询范围：</span>
+							<input type="number" v-model="selectDaySize" /> 天
+						</div>
+						
+						<div>
+							<span class="orange-color">Core Rule：</span>
+							<input type="radio" name="coreRule" value="minPrice" v-model="coreRule">日内策略位最低价
+							<input type="radio" name="coreRule" value="strategyPrice" v-model="coreRule">策略位价
+						</div>
 					</div><br />
 					
 					<form enctype="multipart/form-data" style="display: inline-block;padding: 7px;border: 1px #888 solid;width: 85%;min-width: 760px;">
@@ -155,19 +164,22 @@
 					</div>
 				</div>
 				
-				<div class="loading-wrapper" v-if="results.renderList.length > 0">
+				<div class="loading-wrapper" v-if="results.renderList.length > 0 || !results.loadingComplete">
 					<img v-if="!results.loadingComplete" src="../static/icon/loading.png" class="loading-icon">
-					<span class="loading-text">{{ !results.loadingComplete ? '加载中...' : '加载完成'}}</span>
+					<span class="loading-text">{{ !results.loadingComplete ? ('加载中：' + results.requestCounts) : '加载完成'}}</span>
 				</div>
 			</div>
 			
 			<!-- 统计面板 -->
 			<div class="tools-in-count">
 				<div class="count-planel-console" id="console-count">
-					<div class="console-close"><img src="../static/icon/icon-close.png" @click="toogleConsole" width="100%" height="100%" /></div>
+					<div class="console-button">
+						<img src="../static/icon/save.png" width="33px" height="33px" @click="consoleExportCoreData" style="transform: rotate(180deg);" alt="保存">
+						<img src="../static/icon/icon-close.png" @click="toogleConsole" width="22px" height="22px" alt="关闭"/>
+					</div>
 					
 					<div class="number-rule-count" id="numberRuleCount">
-						<p class="orange-color">
+						<p class="orange-color title">
 							<span v-if="renderConsoleSymbol == 'renderList'">Choice Core Data Count：</span>
 							<span v-if="renderConsoleSymbol == 'triggerStrategyInvalid'">已触发策略失效：</span>
 							<span v-if="renderConsoleSymbol == 'noSearchInfo'">未查询到涨板信息：</span>
@@ -175,22 +187,33 @@
 						</p><br />
 						
 						<div v-if="renderConsoleSymbol == 'renderList'">
-							<span class="orange-color">剩余差幅区间：Rate >= -</span> <input type="text" v-model="choiceDiffRate" style="width: 100px;"> %
+							<span class="orange-color">剩余差幅区间：</span> 
+							<input type="number" v-model="selectRange.beginRate" style="width: 50px;" @keyup="keyupEventListenerStop($event.currentTarget)" @input="coreConsoleAction('renderList', 'change');">
+							<span>——</span>
+							<input type="number" v-model="selectRange.endRate" style="width: 50px;" @keyup="keyupEventListenerStop($event.currentTarget)" @input="coreConsoleAction('renderList', 'change');"> Unit %
 						</div>
 						
 						
 						<div class="data-list">
 							<ol>
-								<li style="width: 240px;" v-for="(item,index) in renderConsoleList">
+								<li style="width: 230px;" v-for="(item,index) in renderConsoleList">
 									<span>{{ index + 1}} 名称：{{ item.name }}（{{ item.code }}）</span>
 								</li>
 							</ol>
 							
 							<ol v-if="renderConsoleSymbol == 'renderList'">
-								<li v-for="(item,index) in renderConsoleList">
+								<li v-for="(item,index) in renderConsoleList" class="renderlist-box" @click="onRenderlistBoxClick($event)">
 									<div style="width: 170px;">剩余差幅：<font :style="{color: afterDiffRate(item) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ afterDiffRate(item) }}%</font></div>
 									<div style="width: 130px;">最新：<font class="orange-color">{{ item._todayClose }}</font></div>
-									<div style="width: 275px;">绝对策略位价：<font class="red-color">{{ excelStrategyPositionPrices(item) }}</font> <sub class="orange-color">Float：{{ floatStrategyPositionPrices(item) }}</sub></div>
+									<div style="width: 320px;" class="strategy-price-box">
+										<div class="strategy-text">
+											<span>绝对策略位价：</span>
+											<font class="red-color">{{ excelStrategyPositionPrices(item) }}</font>
+											<sub class="orange-color">Float：{{ floatStrategyPositionPrices(item) }}</sub>
+										</div>
+										<img class="copy-icon" src="../static/icon/copy.png" alt="copy" @click="copyStrategyPrice($event)">
+									</div>
+									
 									<div style="width: 170px;">最新涨幅：<font :style="{color: diffRateCompute(item._todayClose, item._todayInYesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ diffRateCompute(item._todayClose, item._todayInYesterdayClose) }}%</font></div>
 									<div>日期{{ moment(item.date).format('MM/DD') }}</div>
 									<div><span class="yesterday-playing" @click="openPlayingWin({ date:item.date, code:item.code })">查看昨日博弈<img src="../static/icon/right.png"></span></div>
