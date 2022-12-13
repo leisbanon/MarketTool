@@ -66,12 +66,17 @@ var $writeRules =  {
 		},
 		// 加载连续涨板的次数
 		getRisePlateCount:function(dataList, date) {
-			var _risePlateCount = 1;
+			var _plateCount = 1;
+			var _plateDate = '';
+			
 			var eachCounts = function(listIndex) {
 				var diffRate = dataList[listIndex].diffRate;
 				if(diffRate && Number(diffRate) >= 9.9) {
-					_risePlateCount += 1;
+					_plateCount += 1;
+					_plateDate = dataList[listIndex].date;
 					eachCounts(listIndex + 1);
+				}else {
+					
 				}
 			}
 			
@@ -82,7 +87,10 @@ var $writeRules =  {
 					break;
 				}
 			}
-			return _risePlateCount;
+			return {
+				_plateCount: _plateCount,
+				_plateDate: _plateDate,
+			};
 		},
 	}
 }

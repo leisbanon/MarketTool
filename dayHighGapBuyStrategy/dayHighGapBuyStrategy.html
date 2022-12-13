@@ -135,7 +135,7 @@
 								<div class="c-body">
 									<div class="option">
 										<span>策略位率：<input class="list-input" :value="item.strategyRate"  type="text" @input="listStrategyRateChange($event, index)" />%</span>
-										<span>涨停：<input class="list-input" :value="item.risePlateCount"  type="text" @input="listRisePlateCountChange($event, index)" />板</span>
+										<span>涨停：<input class="list-input" :value="item._plateCount"  type="text" @input="listRisePlateCountChange($event, index)" />板</span>
 										<span>coreHighRate：{{ diffRateCompute((Number(item.openPrice) + Number(item.maxPrice)) / 2, item.yesterdayClose) }}%</span>
 									</div>
 									

@@ -34,7 +34,7 @@ var $dayHighGapBuyStrategy = {
 		},
 		// 列表涨板位变更触发
 		listRisePlateCountChange:function(event, index) {
-			this.results.renderList[index].risePlateCount = event.target.value;
+			this.results.renderList[index]._plateCount = event.target.value;
 		},
 		// 剩余差幅
 		afterDiffRate:function(item) {
@@ -43,21 +43,24 @@ var $dayHighGapBuyStrategy = {
 		},
 		// 浮动策略位价
 		floatStrategyPositionPrices:function(item) {
-			var strategyPrice = this.strategyPositionPriceTwo(item, item.strategyRate, item.risePlateCount);
+			var strategyPrice = this.strategyPositionPriceTwo(item, item.strategyRate, item._plateCount);
 			var result = Number(strategyPrice) + (strategyPrice * 0.166 / 100)
 			return (result || 0).toFixed(2);
 		},
 		// 列表策略位价计算
 		excelStrategyPositionPrices:function(item) {
-			return this.strategyPositionPriceTwo(item, item.strategyRate, item.risePlateCount);
+			return this.strategyPositionPriceTwo(item, item.strategyRate, item._plateCount);
 		},
 		// 迭代器
 		iterator:function(object, callback) {
+			// debugger;
 			var _this = this;
+			var _plateDate = object._plateDate ?  moment(object._plateDate).subtract(3, 'days').format('YYYYMMDD') : '';
+			
 			var params = {
 				code: object.code,
 				time: 'day',
-				beginDay: moment().subtract(_this.selectDaySize, 'days').format('YYYYMMDD'),
+				beginDay: _plateDate || moment().subtract(_this.selectDaySize, 'days').format('YYYYMMDD'),
 			};
 			
 			var basicInfo = { code: object.code,name: object.name };
@@ -90,7 +93,8 @@ var $dayHighGapBuyStrategy = {
 							maxPrice: dataList[i - 1].max,
 							closePrice: dataList[i - 1].close,
 							strategyRate: 33,
-							risePlateCount: risePlateCount,
+							_plateCount: risePlateCount['_plateCount'],
+							_plateDate: risePlateCount['_plateDate'],
 							yesterdayClose: item.close,
 							
 							_todayClose: dataList[0].close,
@@ -103,7 +107,7 @@ var $dayHighGapBuyStrategy = {
 							_this.results.renderList.push(renderObject);
 							setTimeout(function() { window.scrollTo(0, document.body.scrollHeight) }, 10)
 						}else {
-							_this.onRunTest(dataList, renderObject);
+							// _this.onRunTest(dataList, renderObject);
 							_this.results.triggerStrategyInvalid.push(basicInfo);
 						}
 						
