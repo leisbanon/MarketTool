@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>日内缩量交易策略</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	
+	<style>
+		.one-result {font-size: 19px !important;display: inline-block;margin-right: 70px;}
+		.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 23px 0;}
+		
+		.yesterday-playing {color: #6495ED !important;display: inline-flex !important;align-items: center;justify-content: flex-start;cursor: pointer;user-select: none;}
+		.yesterday-playing img {transform: scaleX(.8);}
+		.yesterday-playing:active {opacity: 0.8;}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		<input type="text" id="clipboardInput" style="opacity: 0;z-index: -1000;position: fixed;top: 0;">
+		
+		<div id="app">
+			<!-- 查询 -->
+			<div class="diff">
+				<h2 style="color: white;">查询：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
+				
+				<div class="box">
+					<span>股票代码：</span>
+					<input type="text" v-model="form.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" @input="onFormChange" />
+					
+					<span>&emsp;日&emsp;期：</span>
+					<input type="date" v-model="form.date" placeholder="请输入查询日期" @change="onFormChange"/>
+					
+					<button type="button" @click="startFetch" style="margin-left: 18px;">查询</button>
+				</div>
+				
+				<div class="box">
+					<span>昨&emsp;&emsp;收：</span>
+					<input type="number" v-model="resForm.yesterdayClose" />
+					
+					<span>&emsp;开盘价：</span>
+					<input type="number" v-model="resForm.openPrice" />
+					
+					<span title="基础涨幅差额率">&emsp;策略位率：</span>
+					<input type="number" v-model="strategyPositionRate"  style="width: 65px;"/> %
+					
+					<span>&emsp;选择策略：</span>
+					<select style="width: 148px;">
+						<option value="strategyTwo">策略一（日内涨停）</option>
+					</select>
+				</div>
+				
+				<div class="middle-line"></div>
+				
+				<div class="box">
+					<span class="one-result">
+						coreHighRate：{{ coreHighRate }}%
+					</span>
+					
+					<span class="one-result"  :style="{ textDecoration: 'underline', color: diffRateCompute(resForm.closePrice, resForm.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'  }">
+						最新涨幅：{{ diffRateCompute(resForm.closePrice, resForm.yesterdayClose) }}%
+					</span>
+					
+					<span class="red-color one-result">
+						绝对策略位价：{{ strategyPositionCompute }}
+						<sub style="color: white;">{{ floatStrategyPositionPrices(strategyPositionCompute) }}</sub>
+					</span>
+					
+					<span class="one-result yesterday-playing" @click="openPlayingWin({date:form.date, code:form.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
+				</div>
+			</div>
+		</div>
+	</body>
+	
+	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[
+				$commonMinxin,
+			],
+			data() {
+				return {
+					form: { // 请求结果数据
+						code:'000721', // 股票代码
+						date: '', // 日期
+					}, 
+					
+					resForm: {
+						openPrice: 0,
+						maxPrice: 0,
+						minPrice: 0,
+						closePrice: 0,
+						
+						yesterdayDate: '', // 昨日日期
+						yesterdayClose: 0, // 昨日收盘
+					},
+				}
+			},
+			mounted:function() {
+				this.form.date = window.moment().format('YYYY-MM-DD');
+			},
+			computed:{
+				coreHighRate:function() {
+					var rate = this.diffRateCompute(this.resForm.openPrice, this.resForm.yesterdayClose);
+					return rate > 0 ? rate : '0.00';
+				},
+				strategyPositionRate:function() {
+					return this.coreHighRate >= 2.33 ? 6.7 : 7.67;
+				},
+				// 策略位价计算
+				strategyPositionCompute:function() {
+					// 回归位价
+					var flybackPrice = 0;
+					if(this.coreHighRate > 0) {
+						flybackPrice = this.resForm.openPrice - (this.resForm.openPrice * this.coreHighRate / 100);
+					}else {
+						flybackPrice = this.resForm.yesterdayClose;
+					}
+					console.log('回归位价 => ' + flybackPrice);
+					
+					var strategyPrice = (flybackPrice - (flybackPrice * this.strategyPositionRate / 100)).toFixed(3);
+					console.log('策略位价 => ' + strategyPrice);
+					return strategyPrice;
+				},
+			},
+			methods:{
+				/**
+				 * 查询个股基本信息
+				 */
+				startFetch:function() {
+					var _this = this;
+					var form = this.form;
+					
+					var params = {
+						code: form.code,
+						time: 'day',
+						beginDay: moment(form.date).subtract(3, 'days').format('YYYYMMDD'),
+					}
+					this.fetchStockRealKlineData(params,function(data) {
+						Object.assign(_this.stock, {
+							code: data.code,
+							name: data.name,
+						});
+						var dataList = data.dataList.reverse();
+						for(var i = 0;i < dataList.length;i++) {
+							var item = dataList[i];
+							if(item['time'] == moment(form.date).format('YYYYMMDD')) {
+								Object.assign(_this.resForm, {
+									openPrice: item.open,
+									closePrice: item.close,
+									
+									yesterdayClose: dataList[i - 1].close,
+									yesterdayDate: dataList[i - 1].date,
+								});
+								break;
+							}
+						}
+					}).catch(function(message) {
+						alert(message);
+					})
+				},
+				// 浮动策略位价
+				floatStrategyPositionPrices:function(price) {
+					var result = Number(price) + (price * 0.166 / 100)
+					return (result || 0).toFixed(2);
+				},
+				// 涨幅计算
+				diffRateCompute:function(close, open) {
+					var result = (close - open) / open * 100;
+					return (result || 0).toFixed(2);
+				},
+				// 主表单数据变更
+				onFormChange:function() {
+					var _this = this;
+					Object.keys(this.resForm).forEach(function(key) { _this.resForm[key] = 0 });
+					this.reset();
+				},
+				// 按键监听
+				onKeyUps:function(event) {
+					if(event.keyCode == 13) {
+						this.startFetch()
+					}
+				},
+				// 查看昨日量价博弈
+				openPlayingWin:function(item) {
+					var beginTime = moment(item.date).subtract(1, 'days').format('YYYY-MM-DD');
+					var params = "code=" + item.code + '&beginTime=' + beginTime + '&onceDay=true';
+					window.open('../volPriceAnalysis/量价计算研测.html?' + params);
+				},
+			}
+		})
+	</script>
+</html>
