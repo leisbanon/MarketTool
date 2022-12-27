@@ -63,6 +63,19 @@
 				<span><span class="orange-color">&emsp;-5.33% -> </span>{{ openPriceDefineRate(-5.33) }}</span>
 			</div>
 			
+			<!-- 购买股数转化 -->
+			<!-- <div class="diff">
+				<h2 style="width: 448px;">0. 成交股数转化：</h2>
+				<span>成本价：</span>
+				<input type="number" v-model="uad.openingPrice" placeholder="请输入价格" />
+				
+				<span>&emsp;拟购买金额：</span>
+				<input type="number" v-model="uad.defineBuyAmount" />
+				
+				<span>&emsp;成交股数：</span>
+				<input type="text" v-model="uad.defineBuyNumber">
+			</div> -->
+			
 			<!-- 止损位计算 -->
 			<div class="diff" id="97">
 				<h2 style="width: 448px;">1. 止损位计算（止损位 | 止盈位）：</h2>
@@ -99,9 +112,11 @@
 				<input type="number" v-model="uad.closingPrice" placeholder="请输入卖出价" />
 				
 				<span>&emsp;成交股数：</span>
-				<input type="number" v-model="uad.vol" placeholder="请输入成交股数" />
+				<button class="min-button" type="button" @click="uad.vol = Number(uad.vol) - 100">-100</button>
+				<input type="number" v-model="uad.vol" style="width: 55px;text-align: center;" />
+				<button class="min-button" type="button" @click="uad.vol = Number(uad.vol) + 100">+100</button>
 				
-				<span>&emsp;原始成交额：{{ formatMoney(uad.openingPrice * uad.vol) }}</span>
+				<span><span class="orange-color">&emsp;原始成交额：</span>{{ formatMoney(uad.openingPrice * uad.vol) }}</span>
 				
 				<span>&emsp;收益额：{{ formatMoney(profitCompute) }}</span>
 			</div>
@@ -167,7 +182,7 @@
 						
 						openingPrice:0, // 开盘价，成本价
 						closingPrice:0, // 收盘价，市场价
-						vol: '', // 成交量
+						vol: 100, // 成交量
 						rangeRatio:2.33, // 涨跌比率
 						
 						minPrice:0, // 最低价
@@ -177,6 +192,12 @@
 					resForm: { // 请求结果数据
 						date:'', 
 					}, 
+				}
+			},
+			mounted:function() {
+				var buttonNodes = document.querySelectorAll('button');
+				for(var button of buttonNodes) {
+					button.addEventListener('touchstart', function(event) { event.stopPropagation() })
 				}
 			},
 			computed:{
