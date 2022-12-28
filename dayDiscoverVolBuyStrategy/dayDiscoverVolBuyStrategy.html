@@ -10,7 +10,7 @@
 	
 	<style>
 		.one-result {font-size: 19px !important;display: inline-block;margin-right: 70px;}
-		.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 90%;margin: 23px 0;}
+		.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 100%;margin: 23px 0;}
 		
 		.yesterday-playing {color: #6495ED !important;display: inline-flex !important;align-items: center;justify-content: flex-start;cursor: pointer;user-select: none;}
 		.yesterday-playing img {transform: scaleX(.8);}
@@ -43,17 +43,23 @@
 					<span>&emsp;开盘价：</span>
 					<input type="number" v-model="resForm.openPrice" />
 					
-					<span title="基础涨幅差额率">&emsp;策略位率：</span>
-					<input type="number" v-model="strategyPositionRate"  style="width: 65px;"/> %
+					<span>&emsp;收盘价：</span>
+					<input type="number" v-model="resForm.closePrice" />
 					
-					<span>&emsp;选择策略：</span>
-					<select style="width: 148px;">
-						<option value="strategyTwo">策略一（日内涨停）</option>
-					</select>
+					<span title="基础涨幅差额率">&emsp;相对策略位率：</span>
+					<input type="number" v-model="relativeStrategyPositionRate"  style="width: 55px;"/> %
+					
+					<span>&emsp;平均策略位率：{{ averageStrategyPositionRate }}%</span>
+				</div>
+				
+				<div class="box">
+					<span>策&emsp;&emsp;略：策略一（日内涨停）</span>
+					
+					<span style="position: relative;left: 13px;">&emsp;策略收盘价：</span>
+					<input type="checkbox" style="width: 32px;margin: 0px" v-model="isIntraday" @change="isIntradayChange" />
 				</div>
 				
 				<div class="middle-line"></div>
-				
 				<div class="box">
 					<span class="one-result">
 						coreHighRate：{{ coreHighRate }}%
@@ -63,9 +69,12 @@
 						最新涨幅：{{ diffRateCompute(resForm.closePrice, resForm.yesterdayClose) }}%
 					</span>
 					
-					<span class="red-color one-result">
-						绝对策略位价：{{ strategyPositionCompute }}
-						<sub style="color: white;">{{ floatStrategyPositionPrices(strategyPositionCompute) }}</sub>
+					<span class="one-result">
+						<font class="red-color">相对策略位价：</font>{{ relativeStrategyPositionCompute }}
+					</span>
+					
+					<span class="one-result">
+						<font class="orange-color">平均策略位价：</font>{{ averageStrategyPositionCompute }}
 					</span>
 					
 					<span class="one-result yesterday-playing" @click="openPlayingWin({date:form.date, code:form.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
@@ -86,7 +95,7 @@
 			data() {
 				return {
 					form: { // 请求结果数据
-						code:'', // 股票代码
+						code:'002614', // 股票代码
 						date: '', // 日期
 					}, 
 					
@@ -99,32 +108,53 @@
 						yesterdayDate: '', // 昨日日期
 						yesterdayClose: 0, // 昨日收盘
 					},
+					
+					isIntraday: false, // 当天的
+					relativeStrategyPositionRate: 7.67, // 相对策略位率
+					averageStrategyPositionRate: 7.18, // 平均策略位率
 				}
 			},
 			mounted:function() {
 				this.form.date = window.moment().format('YYYY-MM-DD');
+				
+				var isIntraday = window.localStorage.getItem('isIntraday') || 'false';
+				this.isIntraday = JSON.parse(isIntraday);
 			},
 			computed:{
 				coreHighRate:function() {
 					var rate = this.diffRateCompute(this.resForm.openPrice, this.resForm.yesterdayClose);
 					return rate > 0 ? rate : '0.00';
 				},
-				strategyPositionRate:function() {
-					return this.coreHighRate >= 2.33 ? 6.7 : 7.67;
-				},
-				// 策略位价计算
-				strategyPositionCompute:function() {
+				// 相对策略位价计算
+				relativeStrategyPositionCompute:function() {
 					// 回归位价
 					var flybackPrice = 0;
-					if(this.coreHighRate > 0) {
+					if(this.isIntraday) {
+						flybackPrice = this.resForm.closePrice;
+					}else if(this.coreHighRate > 0) {
 						flybackPrice = this.resForm.openPrice - (this.resForm.openPrice * this.coreHighRate / 100);
 					}else {
 						flybackPrice = this.resForm.yesterdayClose;
 					}
-					console.log('回归位价 => ' + flybackPrice);
+					console.log('相对策略回归位价 => ' + flybackPrice);
 					
-					var strategyPrice = (flybackPrice - (flybackPrice * this.strategyPositionRate / 100)).toFixed(3);
-					console.log('策略位价 => ' + strategyPrice);
+					var strategyPrice = (flybackPrice - (flybackPrice * this.relativeStrategyPositionRate / 100)).toFixed(3);
+					console.log('相对策略位价 => ' + strategyPrice);
+					return strategyPrice;
+				},
+				// 平均策略位价计算
+				averageStrategyPositionCompute:function() {
+					// 回归位价
+					var flybackPrice = 0;
+					if(this.isIntraday) {
+						flybackPrice = this.resForm.closePrice;
+					}else {
+						flybackPrice = this.resForm.yesterdayClose;
+					}
+					console.log('平均策略回归位价 => ' + flybackPrice);
+					
+					var strategyPrice = (flybackPrice - (flybackPrice * this.averageStrategyPositionRate / 100)).toFixed(3);
+					console.log('平均策略位价 => ' + strategyPrice);
 					return strategyPrice;
 				},
 			},
@@ -157,6 +187,8 @@
 									yesterdayClose: dataList[i - 1].close,
 									yesterdayDate: dataList[i - 1].date,
 								});
+								
+								_this.relativeStrategyPositionRate = _this.coreHighRate >= 2.33 ? 6.7 : 7.67;
 								break;
 							}
 						}
@@ -192,6 +224,9 @@
 					var params = "code=" + item.code + '&beginTime=' + beginTime + '&onceDay=true';
 					window.open('../volPriceAnalysis/量价计算研测.html?' + params);
 				},
+				isIntradayChange:function(value) {
+					window.localStorage.setItem('isIntraday', this.isIntraday);
+				}
 			}
 		})
 	</script>

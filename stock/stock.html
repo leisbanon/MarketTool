@@ -113,7 +113,7 @@
 				
 				<span>&emsp;成交股数：</span>
 				<button class="min-button" type="button" @click="uad.vol = Number(uad.vol) - 100">-100</button>
-				<input type="number" v-model="uad.vol" style="width: 55px;text-align: center;" />
+				<input type="number" v-model="uad.vol" style="width: 100px;text-align: center;" />
 				<button class="min-button" type="button" @click="uad.vol = Number(uad.vol) + 100">+100</button>
 				
 				<span><span class="orange-color">&emsp;原始成交额：</span>{{ formatMoney(uad.openingPrice * uad.vol) }}</span>
