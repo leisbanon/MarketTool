@@ -5,17 +5,9 @@
 		<title>日内缩量交易策略</title>
 		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
 		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<link rel="stylesheet" type="text/css" href="./dayDiscoverVolBuyStrategy.css"/>
 		<script src="../static/js/vue@v2.6.js"></script>
 	</head>
-	
-	<style>
-		.one-result {font-size: 19px !important;display: inline-block;margin-right: 70px;}
-		.middle-line {border-bottom: 1px #DDD;border-bottom-style: dashed;transform: scaleY(0.3);width: 100%;margin: 23px 0;}
-		
-		.yesterday-playing {color: #6495ED !important;display: inline-flex !important;align-items: center;justify-content: flex-start;cursor: pointer;user-select: none;}
-		.yesterday-playing img {transform: scaleX(.8);}
-		.yesterday-playing:active {opacity: 0.8;}
-	</style>
 	
 	<body>
 		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
@@ -55,7 +47,7 @@
 				<div class="box">
 					<span>策&emsp;&emsp;略：策略一（日内涨停）</span>
 					
-					<span style="position: relative;left: 13px;">&emsp;策略收盘价：</span>
+					<span style="position: relative;left: 13px;">&emsp;策略收盘价（Global）：</span>
 					<input type="checkbox" style="width: 32px;margin: 0px" v-model="isIntraday" @change="isIntradayChange" />
 				</div>
 				
@@ -70,14 +62,62 @@
 					</span>
 					
 					<span class="one-result">
-						<font class="red-color">相对策略位价：</font>{{ relativeStrategyPositionCompute }}
+						<font class="red-color">相对策略位价：</font>{{ relativeStrategyPositionCompute() }}
 					</span>
 					
 					<span class="one-result">
-						<font class="orange-color">平均策略位价：</font>{{ averageStrategyPositionCompute }}
+						<font class="orange-color">平均策略位价：</font>{{ averageStrategyPositionCompute() }}
 					</span>
 					
 					<span class="one-result yesterday-playing" @click="openPlayingWin({date:form.date, code:form.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
+				</div>
+				
+				<div class="box" style="display: block;">
+					<h2>个股录入遍历（当日）：</h2>
+					<img @click="eachStockCodes" class="list-fetchs-icon" src="../static/icon/right2.png" alt="查询">
+					<input type="text" id="codesInput" @keyup="stockCodesKeyUp" class="list-codes" placeholder="录入格式: 000001 399001" />
+					<br/><br/>
+					
+					<div class="files-request-list">
+						<ol>
+							<li v-for="(item,index) in stockCodesInput" :key="index">
+								<div class="c-header">
+									<span>
+										{{ index + 1}}
+										名称：<font class="orange-color">{{ item.name }}（{{ item.code }}）</font>
+									</span>
+									
+									<span class="date">日期：{{ moment(item.date).format('MM/DD') }}</span>
+									<div class="middle-line"></div>
+								</div>
+								
+								<div class="c-body">
+									<div class="option">
+										<span>相对策略位率：<input class="list-input" :value="item.relativeStrategyPositionRate"  type="text" />%</span>
+										<span>平均策略位率：{{ averageStrategyPositionRate }}%</span>
+									</div>
+									
+									<div class="option">
+										<span>昨收：{{ item.yesterdayClose }}</span>
+										<span>开盘价：{{ item.openPrice }}</span>
+										<span>收盘价：{{ item.closePrice }}</span>
+									</div>
+									
+									<div class="option">
+										<span>coreHighRate：{{ item.coreHighRate }}</span>
+										<span>最新涨幅：<font :style="{color: diffRateCompute(item.closePrice, item.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ diffRateCompute(item.closePrice, item.yesterdayClose) }}%</font></span>
+										<span class="yesterday-playing" @click="openPlayingWin({date:item.date, code:item.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
+										<div class="middle-line"></div>
+									</div>
+								</div>
+								
+								<div class="c-footer">
+									<span class="red-color">相对策略位价：{{ relativeStrategyPositionCompute(item) }}</span>
+									<span class="orange-color">平均策略位价：{{ averageStrategyPositionCompute(item) }}</span>
+								</div>
+							</li>
+						</ol>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -86,16 +126,19 @@
 	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./strategy.js" charset="utf-8"></script>
+	
 	<script type="text/javascript">
 		var app = new Vue({
 			el: '#app',
 			mixins:[
 				$commonMinxin,
+				$strategy
 			],
 			data() {
 				return {
 					form: { // 请求结果数据
-						code:'002614', // 股票代码
+						code:'', // 股票代码
 						date: '', // 日期
 					}, 
 					
@@ -112,6 +155,8 @@
 					isIntraday: false, // 当天的
 					relativeStrategyPositionRate: 7.67, // 相对策略位率
 					averageStrategyPositionRate: 7.18, // 平均策略位率
+					
+					stockCodesInput:[],
 				}
 			},
 			mounted:function() {
@@ -119,46 +164,82 @@
 				
 				var isIntraday = window.localStorage.getItem('isIntraday') || 'false';
 				this.isIntraday = JSON.parse(isIntraday);
+				
+				document.getElementById("codesInput").value = window.localStorage.getItem('codesInputValue') || '';
 			},
 			computed:{
 				coreHighRate:function() {
 					var rate = this.diffRateCompute(this.resForm.openPrice, this.resForm.yesterdayClose);
 					return rate > 0 ? rate : '0.00';
 				},
-				// 相对策略位价计算
-				relativeStrategyPositionCompute:function() {
-					// 回归位价
-					var flybackPrice = 0;
-					if(this.isIntraday) {
-						flybackPrice = this.resForm.closePrice;
-					}else if(this.coreHighRate > 0) {
-						flybackPrice = this.resForm.openPrice - (this.resForm.openPrice * this.coreHighRate / 100);
-					}else {
-						flybackPrice = this.resForm.yesterdayClose;
-					}
-					console.log('相对策略回归位价 => ' + flybackPrice);
-					
-					var strategyPrice = (flybackPrice - (flybackPrice * this.relativeStrategyPositionRate / 100)).toFixed(3);
-					console.log('相对策略位价 => ' + strategyPrice);
-					return strategyPrice;
-				},
-				// 平均策略位价计算
-				averageStrategyPositionCompute:function() {
-					// 回归位价
-					var flybackPrice = 0;
-					if(this.isIntraday) {
-						flybackPrice = this.resForm.closePrice;
-					}else {
-						flybackPrice = this.resForm.yesterdayClose;
-					}
-					console.log('平均策略回归位价 => ' + flybackPrice);
-					
-					var strategyPrice = (flybackPrice - (flybackPrice * this.averageStrategyPositionRate / 100)).toFixed(3);
-					console.log('平均策略位价 => ' + strategyPrice);
-					return strategyPrice;
-				},
 			},
 			methods:{
+				/**
+				 * 个股录入遍历查询
+				 */
+				eachStockCodes:function() {
+					var _this = this;
+					this.stockCodesInput = [];
+					
+					var codesInputValue = document.getElementById("codesInput").value;
+					window.localStorage.setItem('codesInputValue', codesInputValue);
+					
+					var codes = codesInputValue.split(' ');
+					console.log(codes);
+					
+					var eachIndex = -1;
+					var eachFetch = function(code) {
+						if(eachIndex + 1 > codes.length) { return; }
+						
+						if(code.replace(/\s/g, '') == '') { next(); return; }
+						
+						var params = {
+							code: code,
+							time: 'day',
+							beginDay: moment().subtract(3, 'days').format('YYYYMMDD'),
+						}
+						
+						_this.fetchStockRealKlineData(params,function(data) {
+							var dataList = data.dataList.reverse();
+							for(var i = 0;i < dataList.length;i++) {
+								var item = dataList[i];
+								if(item['time'] == moment().format('YYYYMMDD')) {
+									var obj = {
+										code: data.code,
+										name: data.name,
+										date: moment(item.time).format('YYYY-MM-DD'),
+										openPrice: item.open,
+										closePrice: item.close,
+										
+										yesterdayClose: (dataList[i - 1] || {}).close,
+									}
+									
+									// coreHighRate
+									var coreHighRate = _this.diffRateCompute(obj.openPrice, obj.yesterdayClose);
+									coreHighRate = coreHighRate > 0 ? coreHighRate : '0.00';
+									obj.coreHighRate = coreHighRate;
+									
+									// relativeStrategyPositionRate
+									var relativeStrategyPositionRate = coreHighRate >= 2.33 ? 6.7 : 7.67;
+									obj.relativeStrategyPositionRate = relativeStrategyPositionRate;
+									
+									_this.stockCodesInput.push(obj);
+									break;
+								}
+							}
+						}).catch(function(message) {
+							console.error(message);
+						}).finally(function() {
+							next();
+						}) 
+					}
+					
+					var next = function() {
+						eachIndex += 1;
+						eachFetch(codes[eachIndex]);
+					}
+					next();
+				},
 				/**
 				 * 查询个股基本信息
 				 */
@@ -184,8 +265,7 @@
 									openPrice: item.open,
 									closePrice: item.close,
 									
-									yesterdayClose: dataList[i - 1].close,
-									yesterdayDate: dataList[i - 1].date,
+									yesterdayClose: (dataList[i - 1] || {}).close,
 								});
 								
 								_this.relativeStrategyPositionRate = _this.coreHighRate >= 2.33 ? 6.7 : 7.67;
@@ -216,6 +296,11 @@
 				onKeyUps:function(event) {
 					if(event.keyCode == 13) {
 						this.startFetch()
+					}
+				},
+				stockCodesKeyUp:function(event) {
+					if(event.keyCode == 13) {
+						this.eachStockCodes();
 					}
 				},
 				// 查看昨日量价博弈
