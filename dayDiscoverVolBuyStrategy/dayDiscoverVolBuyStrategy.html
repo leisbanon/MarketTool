@@ -14,6 +14,18 @@
 		<input type="text" id="clipboardInput" style="opacity: 0;z-index: -1000;position: fixed;top: 0;">
 		
 		<div id="app">
+			<!-- 全局值设定 -->
+			<div class="diff">
+				<h2 style="color: white;">全局值设定</h2>
+				<span>日期：</span>
+				<input type="date" v-model="form.date" placeholder="请输入查询日期" @change="onFormChange"/>
+				
+				<span>&emsp;策略：策略一（日内涨停）</span>
+				
+				<span style="position: relative;left: 13px;">&emsp;策略收盘价（Global）：</span>
+				<input type="checkbox" style="width: 32px;margin: 0px" v-model="isIntraday" @change="isIntradayChange" />
+			</div>
+			
 			<!-- 查询 -->
 			<div class="diff">
 				<h2 style="color: white;">查询：<span style="font-size: inherit !important;color: #FF4500;">{{ stock.name }} {{ stock.code }}</span></h2>
@@ -21,10 +33,6 @@
 				<div class="box">
 					<span>股票代码：</span>
 					<input type="text" v-model="form.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" @input="onFormChange" />
-					
-					<span>&emsp;日&emsp;期：</span>
-					<input type="date" v-model="form.date" placeholder="请输入查询日期" @change="onFormChange"/>
-					
 					<button type="button" @click="startFetch" style="margin-left: 18px;">查询</button>
 				</div>
 				
@@ -42,13 +50,6 @@
 					<input type="number" v-model="relativeStrategyPositionRate"  style="width: 55px;"/> %
 					
 					<span>&emsp;平均策略位率：{{ averageStrategyPositionRate }}%</span>
-				</div>
-				
-				<div class="box">
-					<span>策&emsp;&emsp;略：策略一（日内涨停）</span>
-					
-					<span style="position: relative;left: 13px;">&emsp;策略收盘价（Global）：</span>
-					<input type="checkbox" style="width: 32px;margin: 0px" v-model="isIntraday" @change="isIntradayChange" />
 				</div>
 				
 				<div class="middle-line"></div>
@@ -71,53 +72,54 @@
 					
 					<span class="one-result yesterday-playing" @click="openPlayingWin({date:form.date, code:form.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
 				</div>
+			</div>
+			
+			<!-- 个股录入遍历 -->
+			<div class="diff">
+				<h2>个股录入遍历（当日）：</h2>
+				<img @click="eachStockCodes" class="list-fetchs-icon" src="../static/icon/right2.png" alt="查询">
+				<input type="text" id="codesInput" @keyup="stockCodesKeyUp" class="list-codes" placeholder="录入格式: 000001 399001" />
+				<br/><br/>
 				
-				<div class="box" style="display: block;">
-					<h2>个股录入遍历（当日）：</h2>
-					<img @click="eachStockCodes" class="list-fetchs-icon" src="../static/icon/right2.png" alt="查询">
-					<input type="text" id="codesInput" @keyup="stockCodesKeyUp" class="list-codes" placeholder="录入格式: 000001 399001" />
-					<br/><br/>
-					
-					<div class="files-request-list">
-						<ol>
-							<li v-for="(item,index) in stockCodesInput" :key="index">
-								<div class="c-header">
-									<span>
-										{{ index + 1}}
-										名称：<font class="orange-color">{{ item.name }}（{{ item.code }}）</font>
-									</span>
-									
-									<span class="date">日期：{{ moment(item.date).format('MM/DD') }}</span>
+				<div class="files-request-list">
+					<ol>
+						<li v-for="(item,index) in stockCodesInput" :key="index">
+							<div class="c-header">
+								<span>
+									{{ index + 1}}
+									名称：<font class="orange-color">{{ item.name }}（{{ item.code }}）</font>
+								</span>
+								
+								<span class="date">日期：{{ moment(item.date).format('MM/DD') }}</span>
+								<div class="middle-line"></div>
+							</div>
+							
+							<div class="c-body">
+								<div class="option">
+									<span>相对策略位率：<input class="list-input" :value="item.relativeStrategyPositionRate"  type="text" />%</span>
+									<span>平均策略位率：{{ averageStrategyPositionRate }}%</span>
+								</div>
+								
+								<div class="option">
+									<span>昨收：{{ item.yesterdayClose }}</span>
+									<span>开盘价：{{ item.openPrice }}</span>
+									<span>收盘价：{{ item.closePrice }}</span>
+								</div>
+								
+								<div class="option">
+									<span>coreHighRate：{{ item.coreHighRate }}</span>
+									<span>最新涨幅：<font :style="{color: diffRateCompute(item.closePrice, item.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ diffRateCompute(item.closePrice, item.yesterdayClose) }}%</font></span>
+									<span class="yesterday-playing" @click="openPlayingWin({date:item.date, code:item.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
 									<div class="middle-line"></div>
 								</div>
-								
-								<div class="c-body">
-									<div class="option">
-										<span>相对策略位率：<input class="list-input" :value="item.relativeStrategyPositionRate"  type="text" />%</span>
-										<span>平均策略位率：{{ averageStrategyPositionRate }}%</span>
-									</div>
-									
-									<div class="option">
-										<span>昨收：{{ item.yesterdayClose }}</span>
-										<span>开盘价：{{ item.openPrice }}</span>
-										<span>收盘价：{{ item.closePrice }}</span>
-									</div>
-									
-									<div class="option">
-										<span>coreHighRate：{{ item.coreHighRate }}</span>
-										<span>最新涨幅：<font :style="{color: diffRateCompute(item.closePrice, item.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ diffRateCompute(item.closePrice, item.yesterdayClose) }}%</font></span>
-										<span class="yesterday-playing" @click="openPlayingWin({date:item.date, code:item.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
-										<div class="middle-line"></div>
-									</div>
-								</div>
-								
-								<div class="c-footer">
-									<span class="red-color">相对策略位价：{{ relativeStrategyPositionCompute(item) }}</span>
-									<span class="orange-color">平均策略位价：{{ averageStrategyPositionCompute(item) }}</span>
-								</div>
-							</li>
-						</ol>
-					</div>
+							</div>
+							
+							<div class="c-footer">
+								<span class="red-color">相对策略位价：{{ relativeStrategyPositionCompute(item) }}</span>
+								<span class="orange-color">平均策略位价：{{ averageStrategyPositionCompute(item) }}</span>
+							</div>
+						</li>
+					</ol>
 				</div>
 			</div>
 		</div>
@@ -189,21 +191,25 @@
 					
 					var eachIndex = -1;
 					var eachFetch = function(code) {
-						if(eachIndex + 1 > codes.length) { return; }
+						if(eachIndex + 1 > codes.length) {
+							_this.showToast('加载完毕！');
+							return;
+						}
 						
 						if(code.replace(/\s/g, '') == '') { next(); return; }
 						
 						var params = {
 							code: code,
 							time: 'day',
-							beginDay: moment().subtract(3, 'days').format('YYYYMMDD'),
+							beginDay: moment(_this.form.date).subtract(3, 'days').format('YYYYMMDD'),
 						}
 						
 						_this.fetchStockRealKlineData(params,function(data) {
+							// debugger
 							var dataList = data.dataList.reverse();
 							for(var i = 0;i < dataList.length;i++) {
 								var item = dataList[i];
-								if(item['time'] == moment().format('YYYYMMDD')) {
+								if(item['time'] == moment(_this.form.date).format('YYYYMMDD')) {
 									var obj = {
 										code: data.code,
 										name: data.name,
