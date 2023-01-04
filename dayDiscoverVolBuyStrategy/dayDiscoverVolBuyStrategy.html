@@ -20,6 +20,9 @@
 				<span>日期：</span>
 				<input type="date" v-model="form.date" placeholder="请输入查询日期" @change="onFormChange"/>
 				
+				<span>&emsp;设定成交额：</span>
+				<input type="number" v-model="defaultBuyAmount" />
+				
 				<span>&emsp;策略：策略一（日内涨停）</span>
 				
 				<span style="position: relative;left: 13px;">&emsp;策略收盘价（Global）：</span>
@@ -98,6 +101,7 @@
 								<div class="option">
 									<span>相对策略位率：<input class="list-input" :value="item.relativeStrategyPositionRate"  type="text" />%</span>
 									<span>平均策略位率：{{ averageStrategyPositionRate }}%</span>
+									<span><font class="red-color">成交额：</font><input class="list-input" v-once v-model="item.defaultBuyAmount"  type="text" /></span>
 								</div>
 								
 								<div class="option">
@@ -107,7 +111,7 @@
 								</div>
 								
 								<div class="option">
-									<span>coreHighRate：{{ item.coreHighRate }}</span>
+									<span>coreHighRate：<font class="orange-color">{{ item.coreHighRate }}</font></span>
 									<span>最新涨幅：<font :style="{color: diffRateCompute(item.closePrice, item.yesterdayClose) > 0 ? 'rgb(255, 69, 0)' : '#00FF60'}">{{ diffRateCompute(item.closePrice, item.yesterdayClose) }}%</font></span>
 									<span class="yesterday-playing" @click="openPlayingWin({date:item.date, code:item.code})">查看昨日博弈<img src="../static/icon/right.png"></span>
 									<div class="middle-line"></div>
@@ -115,8 +119,15 @@
 							</div>
 							
 							<div class="c-footer">
-								<span class="red-color">相对策略位价：{{ relativeStrategyPositionCompute(item) }}</span>
-								<span class="orange-color">平均策略位价：{{ averageStrategyPositionCompute(item) }}</span>
+								<span class="red-color">
+									相对策略位价：{{ relativeStrategyPositionCompute(item) }}
+									<sub>{{ computeBuyVol('relative', item)}}</sub>
+								</span>
+								
+								<span class="orange-color">
+									平均策略位价：{{ averageStrategyPositionCompute(item) }}
+									<sub>{{ computeBuyVol('average', item)}}</sub>
+								</span>
 							</div>
 						</li>
 					</ol>
@@ -154,6 +165,7 @@
 						yesterdayClose: 0, // 昨日收盘
 					},
 					
+					defaultBuyAmount: 10000, // 设定成交额
 					isIntraday: false, // 当天的
 					relativeStrategyPositionRate: 7.67, // 相对策略位率
 					averageStrategyPositionRate: 7.18, // 平均策略位率
@@ -162,7 +174,9 @@
 				}
 			},
 			mounted:function() {
-				this.form.date = window.moment().format('YYYY-MM-DD');
+				this.form.date = window.localStorage.getItem('dateInit') || window.moment().format('YYYY-MM-DD');
+				
+				this.defaultBuyAmount = window.localStorage.getItem('defaultBuyAmount') || 10000;
 				
 				var isIntraday = window.localStorage.getItem('isIntraday') || 'false';
 				this.isIntraday = JSON.parse(isIntraday);
@@ -182,6 +196,10 @@
 				eachStockCodes:function() {
 					var _this = this;
 					this.stockCodesInput = [];
+					
+					window.localStorage.setItem('dateInit', moment(this.form.date).format('YYYY-MM-DD'));
+					
+					window.localStorage.setItem('defaultBuyAmount', this.defaultBuyAmount);
 					
 					var codesInputValue = document.getElementById("codesInput").value;
 					window.localStorage.setItem('codesInputValue', codesInputValue);
@@ -217,6 +235,7 @@
 										openPrice: item.open,
 										closePrice: item.close,
 										
+										defaultBuyAmount: _this.defaultBuyAmount,
 										yesterdayClose: (dataList[i - 1] || {}).close,
 									}
 									

@@ -15,7 +15,7 @@
 .files-request-list .c-body .option span:last-child {width: auto;}
 
 .files-request-list .date {float: right;}
-.files-request-list .list-input {width: 43px !important;text-align: center;background-color: transparent;border: 1px white solid;border-left: none;border: none;border-bottom: 1px #222 dotted;}
+.files-request-list .list-input {width: 48px !important;text-align: center;background-color: transparent;border: 1px white solid;border-left: none;border: none;border-bottom: 1px #222 dotted;}
 .files-request-list .middle-line {margin: 7px 0;width: 100%;border-bottom: 1px rgba(40,44,53,0.75);border-bottom-style: dashed;}
 
 .files-request-list .c-footer {line-height: 33px;position: relative;display: flex;justify-content: space-between;}

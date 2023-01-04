@@ -44,5 +44,21 @@ var $strategy = {
 			// console.log('相对策略位价 => ' + strategyPrice);
 			return strategyPrice;
 		},
+		// 计算购买数量
+		computeBuyVol:function(symbol, item) {
+			var defaultBuyAmount = item.defaultBuyAmount;
+			
+			var strategyPositionPrice = 0;
+			if(symbol == 'relative') {
+				strategyPositionPrice = this.relativeStrategyPositionCompute(item).toString().split('.');
+			}else if(symbol == 'average') {
+				strategyPositionPrice = this.averageStrategyPositionCompute(item).toString().split('.');
+			}
+			strategyPositionPrice = strategyPositionPrice[0] + '.' + (strategyPositionPrice[1] || '00').substr(0, 2);
+			
+			var vol = Math.floor(defaultBuyAmount / strategyPositionPrice);
+			vol = (vol % 100 == 0) ? vol : vol - vol % 100 + 100;
+			return vol;
+		},
 	}
 }
