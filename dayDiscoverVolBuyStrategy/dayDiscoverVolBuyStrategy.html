@@ -174,7 +174,7 @@
 				}
 			},
 			mounted:function() {
-				this.form.date = window.localStorage.getItem('dateInit') || window.moment().format('YYYY-MM-DD');
+				this.form.date = window.moment().format('YYYY-MM-DD');
 				
 				this.defaultBuyAmount = window.localStorage.getItem('defaultBuyAmount') || 10000;
 				
@@ -196,8 +196,6 @@
 				eachStockCodes:function() {
 					var _this = this;
 					this.stockCodesInput = [];
-					
-					window.localStorage.setItem('dateInit', moment(this.form.date).format('YYYY-MM-DD'));
 					
 					window.localStorage.setItem('defaultBuyAmount', this.defaultBuyAmount);
 					
