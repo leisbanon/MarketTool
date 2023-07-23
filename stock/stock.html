@@ -58,28 +58,36 @@
 			<!-- Basic Number Rate -->
 			<div class="diff">
 				<h2 style="color: white;">Basic Number Rate：</h2>
-				<span><span class="orange-color">0.166% -> </span>{{ openPriceDefineRate(0.166) }}</span>
-				<span><span class="orange-color">&emsp;2.33% -> </span>{{ openPriceDefineRate(2.33) }}</span>
-				<span><span class="orange-color">&emsp;-5.33% -> </span>{{ openPriceDefineRate(-5.33) }}</span><br/><br/>
+				<span v-for="rate of basicRates" :key="`a_${ rate }`" style="margin-right: 18px;">
+					<span class="orange-color">{{ rate }}%</span>
+					<span>-></span>
+					<span>{{ openPriceDefineRate(Number(rate)) }}</span>
+				</span><br/><br/>
 				
-				<span><span class="orange-color">-6.7% -> </span>{{ openPriceDefineRate(-6.7) }}</span>
-				<span><span class="orange-color">&emsp;-7.67% -> </span>{{ openPriceDefineRate(-7.67) }}</span>
-				<span><span class="red-color">&emsp;-7.18% -> </span>{{ openPriceDefineRate(-7.18) }}</span>
-				<span><span class="red-color">&emsp;-8.33% -> </span>{{ openPriceDefineRate(-8.33) }}</span>
+				<span v-for="rate of basicRates" :key="`a_${ rate }`" style="margin-right: 18px;">
+					<span class="orange-color">-{{ rate }}%</span>
+					<span>-></span>
+					<span>{{ openPriceDefineRate(Number(-rate)) }}</span>
+				</span>
 			</div>
 			
-			<!-- 购买股数转化 -->
-			<!-- <div class="diff">
-				<h2 style="width: 448px;">0. 成交股数转化：</h2>
-				<span>成本价：</span>
-				<input type="number" v-model="uad.openingPrice" placeholder="请输入价格" />
+			<!-- 仓位管理 -->
+			<div class="diff">
+				<h2 style="color: white;">仓位管理：</h2>
+				<span>总&nbsp;仓&nbsp;位：</span>
+				<input type="number" v-model="storeForm.totalMoney" placeholder="请输入总仓位/元" /> REM
 				
-				<span>&emsp;拟购买金额：</span>
-				<input type="number" v-model="uad.defineBuyAmount" />
+				<span>&emsp;总仓止损率：</span>
+				- <input type="number" v-model="storeForm.lossRate" placeholder="请输入总仓止损率" style="width: 80px;" /> %
+				<span>&emsp;总仓止损位：<span class="orange-color">¥{{ storeTotalLossCompute }}</span></span>
 				
-				<span>&emsp;成交股数：</span>
-				<input type="text" v-model="uad.defineBuyNumber">
-			</div> -->
+				<br/><strong><span class="red-color">↓</span></strong><br/>
+				
+				<span>买入持仓：</span>
+				<input type="number" v-model="storeForm.inMoney" placeholder="请输入买入持仓/元" /> REM
+				<span>&emsp;可持仓止损率：<span class="green-color">{{ storeInLossRateCompute }}%</span></span>
+				<span>&emsp;可持仓止损位：<span class="green-color">{{ storeInLossResCompute }} REM</span></span>
+			</div>
 			
 			<!-- 止损位计算 -->
 			<div class="diff" id="97">
@@ -181,6 +189,14 @@
 			mixins:[$commonMinxin],
 			data() {
 				return {
+					basicRates: [0.166, 1.33, 2.33, 5.33, 6.7, 7.18, 7.67, 8.33, 9.33],
+					
+					storeForm: {
+						totalMoney: 50000,
+						inMoney: 0,
+						lossRate: 2,
+					},
+					
 					uad:{
 						code:'', // 股票代码
 						date:window.moment().format('YYYY-MM-DD'), // 日期
@@ -204,6 +220,8 @@
 				for(var button of buttonNodes) {
 					button.addEventListener('touchstart', function(event) { event.stopPropagation() })
 				}
+				
+				this.thought()
 			},
 			computed:{
 				/**
@@ -219,6 +237,34 @@
 					var buyPrice = _openingPrice * _vol;
 					var putPrice = _closingPrice * _vol;
 					return putPrice - buyPrice;
+				},
+				/**
+				 * 总仓止损位计算-REM
+				 */
+				storeTotalLossCompute:function() {
+					var value = this.storeForm.totalMoney - (this.storeForm.totalMoney * this.storeForm.lossRate / 100);
+					var v_fixed = value.toFixed(3);
+					return Number(v_fixed);
+				},
+				/**
+				 * 可持仓止损率计算
+				 */
+				storeInLossRateCompute:function() {
+					var totalMoney = this.storeForm.totalMoney;
+					var inMoney = this.storeForm.inMoney;
+					if(!totalMoney || !inMoney) return 0
+					
+					var size = inMoney - (totalMoney - this.storeTotalLossCompute);
+					var rate = (inMoney - size) / inMoney * 100;
+					return -Number(rate.toFixed(2));
+				},
+				/**
+				 * 可持仓止损位计算
+				 */
+				storeInLossResCompute:function() {
+					var totalMoney = this.storeForm.totalMoney;
+					var value = totalMoney - this.storeTotalLossCompute;
+					return -Number(value.toFixed(2));
 				},
 				/**
 				 * 止损位计算
@@ -238,10 +284,12 @@
 				},
 			},
 			methods:{
+				thought:function() {
+				},
 				/**
 				 * 日期发生变化
 				 */
-				onDateChange() {
+				onDateChange:function() {
 					this.reset();
 					this.getStockInfo();
 				},
