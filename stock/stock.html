@@ -71,24 +71,6 @@
 				</span>
 			</div>
 			
-			<!-- 仓位管理 -->
-			<div class="diff">
-				<h2 style="color: white;">仓位管理：</h2>
-				<span>总&nbsp;仓&nbsp;位：</span>
-				<input type="number" v-model="storeForm.totalMoney" placeholder="请输入总仓位/元" /> REM
-				
-				<span>&emsp;总仓止损率：</span>
-				- <input type="number" v-model="storeForm.lossRate" placeholder="请输入总仓止损率" style="width: 80px;" /> %
-				<span>&emsp;总仓止损位：<span class="orange-color">¥{{ storeTotalLossCompute }}</span></span>
-				
-				<br/><strong><span class="red-color">↓</span></strong><br/>
-				
-				<span>买入持仓：</span>
-				<input type="number" v-model="storeForm.inMoney" placeholder="请输入买入持仓/元" /> REM
-				<span>&emsp;可持仓止损率：<span class="green-color">{{ storeInLossRateCompute }}%</span></span>
-				<span>&emsp;可持仓止损位：<span class="green-color">{{ storeInLossResCompute }} REM</span></span>
-			</div>
-			
 			<!-- 止损位计算 -->
 			<div class="diff" id="97">
 				<h2 style="width: 448px;">1. 止损位计算（止损位 | 止盈位）：</h2>
@@ -176,6 +158,24 @@
 					<li title="当日区间：“最低价” 与 “最高价” 的比较"><span>当日区间：</span>{{ highOfLowCompute('3') }}</li>
 				</ul>
 			</div>
+			
+			<!-- 仓位管理 -->
+			<div class="diff">
+				<h2 style="color: white;">7. 仓位管理：</h2>
+				<span>总&nbsp;仓&nbsp;位：</span>
+				<input type="number" v-model="storeForm.totalMoney" placeholder="请输入总仓位/元" /> REM
+				
+				<span>&emsp;总仓止损率：</span>
+				- <input type="number" v-model="storeForm.lossRate" placeholder="请输入总仓止损率" style="width: 80px;" /> %
+				<span>&emsp;总仓止损位：<span class="orange-color">¥{{ storeTotalLossCompute }}</span></span>
+				
+				<br/><strong><span class="red-color">↓</span></strong><br/>
+				
+				<span>买入持仓：</span>
+				<input type="number" v-model="storeForm.inMoney" placeholder="请输入买入持仓/元" /> REM
+				<span>&emsp;可持仓止损率：<span class="green-color">{{ storeInLossRateCompute }}%</span></span>
+				<span>&emsp;可持仓止损位：<span class="green-color">{{ storeInLossResCompute }} REM</span></span>
+			</div>
 		</div>
 	</body>
 	
@@ -189,7 +189,7 @@
 			mixins:[$commonMinxin],
 			data() {
 				return {
-					basicRates: [0.166, 1.33, 2.33, 5.33, 6.7, 7.18, 7.67, 8.33, 9.33],
+					basicRates: [0.166, 1.33, 2, 2.33, 5.33, 6.7, 7.18, 7.67, 8.33, 9.33],
 					
 					storeForm: {
 						totalMoney: 50000,

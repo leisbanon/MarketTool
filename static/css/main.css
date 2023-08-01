@@ -27,13 +27,14 @@ body { height: 100%;background-color: rgba(40,44,53,0.75);color: white;}
 .button-disable {-webkit-filter: grayscale(100%);filter: grayscale(100%);pointer-events: none;}
 .clear-text-button {color: #FF4500;display: inline-block;cursor: pointer;user-select: none;}
 .clear-text-button:active {opacity: 0.85;}
+.pointer {cursor: pointer;}
 
 .red-color { color:  rgb(255, 69, 0); }
 .green-color { color: #00FF60; }
 .blue-color { color: #6495ED;}
 .orange-color { color: rgb(255,167,0); }
 
-input[type="radio"] {width: 28px !important;}
+input[type="radio"] {width: 28px !important;margin: 3px 3px 0px 3px;padding: 0;}
 label { cursor: pointer; }
 
 div[tooltip="tooltip"] {position: absolute;background-color: rgba(51,51,51,0.95);color: white;padding: 7px 10px;border-radius: 5px;bottom: 35px;left: 50%;transform: translateX(-50%);font-size: 14px;user-select: all;}

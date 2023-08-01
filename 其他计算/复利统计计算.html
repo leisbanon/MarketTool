@@ -10,7 +10,7 @@
 	<style type="text/css">
 		#app { margin-left: 28px; }
 		.details ol li {padding: 8px 0;border-bottom: 1px #888 solid;}
-		.details ol li span { display: inline-block;margin-right: 22px; }
+		.details ol li span { display: inline-block;margin-right: 22px;font-size: 14px !important; }
 		.footer-count {text-align: left;display: inline-block;padding: 0px 12px;border-radius: 100px;background: white;color: rgb(255, 69, 0);margin-right: 30px;height: 27px;line-height: 27px;}
 		.describe {transform: scale(0.85);transform-origin: left top;line-height: 25px;color: rgba(255,167,0);}
 		
@@ -27,8 +27,13 @@
 			<!-- 全局数值设定 -->
 			<div class="diff">
 				<h2 style="color: white;">全局数值设定：</h2>
-				<span>初始金：</span>
-				<input type="number" v-model="form.initMoney" @input="compoundInterestCompute" placeholder="请输入初始金" />
+				<span>初始总仓位：</span>
+				<input type="number" v-model="form.storeMoney" @input="compoundInterestCompute" placeholder="请输入初始金" /> REM
+				
+				<span>&emsp;单笔入仓比例：</span>
+				<input type="number" v-model="form.buyProportion" @input="compoundInterestCompute" placeholder="请输入仓比例" style="width: 80px;" /> %
+				
+				<span>&emsp;初始入仓金额：{{ formatMoney(initMoney) }}</span>
 				
 				<span>&emsp;复利率：</span>
 				<input type="number" v-model="form.compoundInterestRate" @input="compoundInterestCompute" style="width: 80px;" /> %
@@ -54,14 +59,33 @@
 				</ol>
 			</div>
 			
-			<!-- 负利率周期 -->
+			<!-- 周期止损策略 -->
 			<div class="diff">
-				<h2 style="color: white;">负利率周期：</h2>
-				<span>指定周期负利率：</span>
-				-<input type="number" v-model="form.minusInterestRate" @input="compoundInterestCompute" style="width: 80px;" /> %
+				<h2 style="color: white;">周期止损策略：</h2>
+				<div>
+					<span>负利率周期（天）：</span>
+					<input type="number" v-model="form.minusCycleDay" @input="compoundInterestCompute" />
+				</div> <br/>
 				
-				<span>&emsp;负利率周期（天）：</span>
-				<input type="number" v-model="form.minusCycleDay" @input="compoundInterestCompute" style="width: 80px;" />
+				<div>
+					<label>
+						<span>1. 总仓止损</span>
+						<input type="radio" name="loss-rule" value="countStore" v-model="form.lossRateType" @change="compoundInterestCompute">
+					</label>
+					
+					<span>&emsp;总仓止损率：</span>
+					<input type="number" v-model="form.lossRate" @input="compoundInterestCompute" style="width: 80px;" /> %
+				</div> <br/>
+				
+				<div>
+					<label>
+						<span>2. 净值止损</span>
+						<input type="radio" name="loss-rule" value="inStore" v-model="form.lossRateType" @change="compoundInterestCompute">
+					</label>
+					
+					<span>&emsp;净值止损率：</span>
+					<input type="number" v-model="form.lossRate" @input="compoundInterestCompute" style="width: 80px;" /> %
+				</div>
 			</div>
 			
 			<div class="diff details">
@@ -69,7 +93,7 @@
 				<!-- 总计额 -->
 				<div class="footer-count">
 					<font color="#333">总&emsp;计：</font>
-					<font>{{ detailList.length > 0 ? formatMoney(detailList[detailList.length - 1].netMoneyCount) : formatMoney(0)}}</font>
+					<font>{{ detailList.length > 0 ? formatMoney(detailList[detailList.length - 1].storeMoneyCount) : formatMoney(0)}}</font>
 				</div>
 				
 				<!-- 总计收益率 -->
@@ -98,13 +122,15 @@
 				
 				<ol>
 					<li :class="{'green-color': item.compoundInterestRate <= 0 }" v-for="(item, index) of detailList" :key="index">
-						<span class="orange-color">当前总金额：{{ formatMoney(item.amount) }}</span>
+						<span @click="showFormula(item.f_buyAmount, $event)" class="orange-color">买入金额：{{ formatMoney(item.buyAmount) }}</span>
 						<span>复利率：{{ item.compoundInterestRate }}%</span>
-						<span class="lines-box">当前结算：{{ formatMoney(item.moneyCount) }}</span>
+						<span @click="showFormula(item.f_moneyCount, $event)">当前结算：{{ formatMoney(item.moneyCount) }}</span>
+						<span @click="showFormula(item.f_moneyDiff, $event)" :class="['lines-box', { 'red-color': item.moneyDiff > 0 }]">结算差额：{{ formatMoney(item.moneyDiff) }}</span>
 						
 						<span>佣金：{{ formatMoney(item.commission) }}（买：{{ formatMoney(item._buyCommission) }}，卖：{{ formatMoney(item._sellCommission) }}）</span>
 						<span>印花税：{{ formatMoney(item.stampDuty) }}</span>
-						<span class="orange-color">净值结算：{{ formatMoney(item.netMoneyCount) }}</span>
+						<span @click="showFormula(item.f_netMoneyCount, $event)" class="orange-color">净值结算：{{ formatMoney(item.netMoneyCount) }}</span>
+						<span @click="showFormula(item.f_storeMoneyCount, $event)" class="orange-color">总仓结算：{{ formatMoney(item.storeMoneyCount) }}</span>
 					</li>
 				</ol>
 			</div>
@@ -122,25 +148,32 @@
 			data() {
 				return {
 					detailList:[],
-					moneyCount: 0,
-					
 					
 					form: {
-						initMoney: 10000, // 初始金
-						compoundInterestRate: 2, // 复利率
-						compoundInterestRateDay: 1, // 复利天数
+						lossRateType: 'countStore',
+						lossRate: 2,
+						
+						storeMoney: 50000,
+						buyProportion: 50, // 买入比例
+						compoundInterestRate: 5.33, // 复利率
+						compoundInterestRateDay: 50, // 复利天数
 						
 						commission: 0.02, // 佣金
 						stampDuty: 0.1, // 印花税
 						transferFee: 0.01, // 过户费
 						
-						
-						minusInterestRate: 1.5, // 指定周期负利率
 						minusCycleDay: 5, // 指定周期（天）负利率
 					}
 				}
 			},
-			created:function() {
+			computed: {
+				// 入仓金额
+				initMoney: function() {
+					var value = this.form.storeMoney * this.form.buyProportion / 100;
+					return value;
+				}
+			},
+			created() {
 				this.compoundInterestCompute();
 			},
 			methods:{
@@ -149,8 +182,8 @@
 				 */
 				profitRate:function() {
 					if(this.detailList.length > 0) {
-						var _netMoneyCount = this.detailList[this.detailList.length - 1].netMoneyCount;
-						var _rate = (_netMoneyCount - this.form.initMoney) / this.form.initMoney * 100;
+						var _storeMoneyCount = this.detailList[this.detailList.length - 1].storeMoneyCount;
+						var _rate = (_storeMoneyCount - this.form.storeMoney) / this.form.storeMoney * 100;
 						return _rate.toFixed(2);
 					}else {
 						return 0;
@@ -188,61 +221,129 @@
 					var pollingCount = 0;
 					var list = [];
 					
-					var compounds = function(amount) {
+					// 获取指定负利率
+					var getLossRate = (buyAmount, storeAmount) => {
+						var rate = null
+						switch (form.lossRateType){
+							case 'countStore':
+								var loss_value = storeAmount * form.lossRate / 100;
+								var loss_size = buyAmount - loss_value;
+								var loss_rate = (loss_size - buyAmount) / buyAmount * 100
+								rate = Number(loss_rate.toFixed(2));
+								break;
+							case 'inStore':
+								rate = -Number(form.lossRate)
+								break;
+						}
+						return rate;
+					}
+					
+					// 入仓比例转换金额
+					var proportionToMoney = (countMoney) => {
+						let value = (countMoney * form.buyProportion / 100).toFixed(2);
+						let formula = `(${countMoney} * ${form.buyProportion} / 100).toFixed(2)`;
+						return {
+							value: Number(value),
+							formula: formula,
+						}
+					}
+					
+					var compounds = (storeAmount) => {
 						pollingCount++;
-						if(pollingCount <= form['compoundInterestRateDay']) {
-							console.log('pollingCount => ' + pollingCount);
-							
+						var ptm = proportionToMoney(storeAmount);
+						var buyAmount = ptm.value;
+						var f_buyAmount = ptm.formula;
+						console.log(pollingCount, buyAmount, storeAmount, 'compounds: params')
+						
+						if(pollingCount <= form['compoundInterestRateDay'] && buyAmount > 0) {
+							var moneyCount, f_moneyCount;
 							
 							// 自定义条件计算 - 指定周期负利率
 							if(pollingCount % form['minusCycleDay'] === 0) {
-								_this.moneyCount = amount + (amount * -form['minusInterestRate'] / 100);
+								var $lossRate = getLossRate(buyAmount, storeAmount);
+								moneyCount = buyAmount + (buyAmount * $lossRate / 100);
+								f_moneyCount = `${buyAmount} + (${buyAmount} * ${$lossRate} / 100)`
 							}else {
-								_this.moneyCount = amount + (amount * form['compoundInterestRate'] / 100);
+								moneyCount = buyAmount + (buyAmount * form['compoundInterestRate'] / 100);
+								f_moneyCount = `${buyAmount} + (${buyAmount} * ${form['compoundInterestRate']} / 100)`
 							}
 							
+							// 结算差额
+							var _moneyDiff = moneyCount - buyAmount
+							var f_moneyDiff = `${moneyCount} - ${buyAmount}`
+							
 							// 买入佣金
-							var _buyCommission = amount * form['commission'] / 100;
+							var _buyCommission = buyAmount * form['commission'] / 100;
 							_buyCommission = _buyCommission > 5 ? _buyCommission : 5;
+							_buyCommission = Number(_buyCommission.toFixed(2));
 							
 							// 卖出佣金
-							var _sellCommission = _this.moneyCount * form['commission'] / 100;
+							var _sellCommission = moneyCount * form['commission'] / 100;
 							_sellCommission = _sellCommission > 5 ? _sellCommission : 5;
+							_sellCommission = Number(_sellCommission.toFixed(2));
+							
+							// 总佣金
+							var _commission = _buyCommission + _sellCommission;
+							_commission = Number(_commission.toFixed(2));
 							
 							// 印花税
-							var _stampDuty = _this.moneyCount * form['stampDuty'] / 100;
+							var _stampDuty = moneyCount * form['stampDuty'] / 100;
+							_stampDuty = Number(_stampDuty.toFixed(2));
 							
 							// 净值结算
-							var _netMoneyCount =  _this.moneyCount - (_buyCommission + _sellCommission + _stampDuty);
+							var _netMoneyCount =  moneyCount - (_buyCommission + _sellCommission + _stampDuty);
+							_netMoneyCount = _netMoneyCount <= 0 ? 0 : _netMoneyCount;
+							_netMoneyCount = Number(_netMoneyCount.toFixed(2));
+							var f_netMoneyCount = `${moneyCount} - (${_buyCommission} + ${_sellCommission} + ${_stampDuty})`
+							
+							// 复利率
+							var _compoundInterestRate = pollingCount % form['minusCycleDay'] === 0 ? $lossRate : form['compoundInterestRate'];
+							
+							// 总仓结算金额
+							var _storeMoneyCount = storeAmount + _netMoneyCount - buyAmount;
+							var f_storeMoneyCount = `${storeAmount} + ${_netMoneyCount} - ${buyAmount}`
 							
 							var data = {
-								// 当前总金额
-								amount: amount,
+								// 买入金额
+								buyAmount: buyAmount,
+								f_buyAmount: f_buyAmount,
 								// 复利率
-								compoundInterestRate: pollingCount % form['minusCycleDay'] === 0 ? -(form['minusInterestRate']) : form['compoundInterestRate'],
+								compoundInterestRate: _compoundInterestRate,
 								// 当前结算
-								moneyCount: _this.moneyCount,
+								moneyCount: Number(moneyCount.toFixed(2)),
+								f_moneyCount: f_moneyCount,
+								// 结算差额
+								moneyDiff: Number(_moneyDiff.toFixed(2)),
+								f_moneyDiff: f_moneyDiff,
 								
-								// 佣金
-								commission: (_buyCommission + _sellCommission).toFixed(2),
+								// 总佣金
+								commission: _commission,
 								// 买入佣金
 								_buyCommission: _buyCommission,
 								// 卖出佣金
 								_sellCommission: _sellCommission,
 								// 印花税
-								stampDuty: _stampDuty.toFixed(2),
+								stampDuty: _stampDuty,
 								// 净值结算金额
-								netMoneyCount: _netMoneyCount.toFixed(2),
+								netMoneyCount: _netMoneyCount,
+								f_netMoneyCount: f_netMoneyCount,
+								// 总仓结算金额
+								storeMoneyCount: Number(_storeMoneyCount.toFixed(2)),
+								f_storeMoneyCount: f_storeMoneyCount,
 							}
+							
 							list.push(data);
-							compounds(_netMoneyCount);
+							compounds(data.storeMoneyCount);
 						}else {
 							_this.detailList = JSON.parse(JSON.stringify(list));
 							// console.log(JSON.stringify(_this.detailList))
-							// console.log('Finish To $money => ' + _this.moneyCount)
 						}
 					}
-					compounds(Number(form['initMoney']));
+
+					compounds(Number(form.storeMoney));
+				},
+				showFormula(content, event) {
+					this.showTooltip(content, event)
 				}
 			}
 		})

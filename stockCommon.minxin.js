@@ -49,6 +49,31 @@ var $commonMinxin = {
 		})
 	},
 	methods:{
+		showTooltip:function(message, event) {
+			var _targetNode = event.target;
+			_targetNode.style.position = 'relative';
+			
+			
+			var tooltip = _targetNode.querySelector('[tooltip="tooltip"');
+			// Create Tooltip Node
+			var createTooltip = function() {
+				// delete all body tooltip node
+				var tooltips = document.body.querySelectorAll('[tooltip="tooltip"');
+				for(var i = 0;i < tooltips.length;i++) {
+					tooltips[i].parentNode.removeChild(tooltips[i]);
+				}
+				
+				tooltip = document.createElement('div');
+				tooltip.setAttribute('tooltip', 'tooltip');
+				tooltip.setAttribute('tooltip', 'tooltip');
+				tooltip.innerHTML = message;
+				_targetNode.appendChild(tooltip);
+				
+				tooltip.addEventListener('click', function(e) { e.stopPropagation() })
+			}
+			
+			tooltip ? _targetNode.removeChild(tooltip) : createTooltip();
+		},
 		showToast:function(message) {
 			var toastEl = document.body.querySelector('#toast');
 			toastEl ? document.body.removeChild(toastEl) : '';
