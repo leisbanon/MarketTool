@@ -95,6 +95,8 @@
 				<input type="number" v-model="uad.closingPrice" placeholder="请输入市场价" />
 				
 				<span>&emsp;涨跌幅：{{ floatCompute }}%</span>
+				
+				<span>&emsp;百分值占比：{{ rateCompute }}%</span>
 			</div>
 			
 			<!-- 盈亏额计算 -->
@@ -280,8 +282,21 @@
 				 */
 				floatCompute:function() {
 					var result = (this.uad.closingPrice - this.uad.openingPrice) / this.uad.openingPrice * 100;
+					if(!isFinite(result) || Number.isNaN(result)) {
+						result = 0
+					}
 					return (result || 0).toFixed(2);
 				},
+				/**
+				 * 百分值占比计算
+				 */
+				rateCompute:function() {
+					var result = this.uad.openingPrice / this.uad.closingPrice * 100;
+					if(!isFinite(result) || Number.isNaN(result)) {
+						result = 0
+					}
+					return result.toFixed(2);
+				}
 			},
 			methods:{
 				thought:function() {
