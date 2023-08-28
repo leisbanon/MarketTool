@@ -56,13 +56,13 @@
 				<h2 style="color: white;">包含手续费：</h2>
 				<span>佣金：0.02%</span>
 				
-				<span>&emsp;印花税：0.1%</span>
+				<span>&emsp;印花税：{{ uad.stampDuty }}%</span>
 				
 				<span>&emsp;过 户 费：/</span>
 				
 				<ol class="describe">
 					<li>佣金：双边收取，按照成交金额进行结算，不足5元按照 “5元” 收取</li>
-					<li>印花税：单边收取，固定为卖出成交金额的 “千分之一”</li>
+					<li>印花税：单边收取，固定为卖出成交金额的 “千分之一” 收取，（2023年8月28日起实施减半征收，即由原来的千分之一改变为千分之零点五）</li>
 					<li>过户费：双边收取，按照成交金额的 “千分之0.1” 收取，（2022年4月29日起，将股票交易过户费总体下调50%，即原来是万分之二），仅上海市场收取</li>
 				</ol>
 				
@@ -168,6 +168,8 @@
 						vol: 1000,
 						rate: 2.33,
 						closingPrice: '/',
+
+						stampDuty: 0.05, // 印花税
 					},
 				}
 			},
@@ -213,9 +215,9 @@
 					sellCommissionAfter = sellCommissionAfter > 5 ? sellCommissionAfter : 5;
 					
 					// 印花税一（先仓）
-					var sellStampDutyFirst = (sellAmountFrist + (sellAmountFrist * this.uad.rate / 100)) * 0.001;
+					var sellStampDutyFirst = (sellAmountFrist + (sellAmountFrist * this.uad.rate / 100)) * (this.uad.stampDuty / 100);
 					// 印花税二（后仓）
-					var sellStampDutyAfter = (sellAmountAfter + (sellAmountAfter * number / 100)) * 0.001;
+					var sellStampDutyAfter = (sellAmountAfter + (sellAmountAfter * number / 100)) * (this.uad.stampDuty / 100)
 					
 					var serveAmountAllObj = {
 						buyCommission: buyCommission,
