@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>委托承接计算器</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	<style>
+		#entrust p, p span {font-size: 18px !important;}
+		
+		.details ol li {padding: 8px 0;border-bottom: 1px #888 solid;}
+		.details ol li span { display: inline-block;margin-right: 22px;font-size: 14px !important; }
+		
+		.insert-number {margin-right: 22px;text-decoration: underline;cursor: pointer;user-select: none;}
+		.insert-number:active {opacity: 0.85;}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<!-- 全局值 -->
+			<div class="diff">
+				<h2 style="color: white;">全局值设定：</h2>
+				
+				<span>成交金额：</span>
+				<input id="volPrice" type="number" v-model="form.volPrice" placeholder="请输入成交金额" @input="init" /> 亿
+				
+				<span>&emsp;委托价：</span>
+				<input type="number" v-model="form.buyPrice" placeholder="请输入委托价" @input="init" /> 元
+				
+				<span>&emsp;委托数量：</span>
+				<input type="number" v-model="form.buyNumber" placeholder="请输入委托数量" @input="init" /> 万
+				
+				<span>&emsp;有效流通市值：</span>
+				<input type="number" v-model="form.marketCount" placeholder="请输入流通市值" @input="init" /> 亿
+			</div>
+			
+			<!-- 承接 -->
+			<div class="diff" id="entrust">
+				<h2>1. 承接：</h2>
+				<p>承接/总金额：<span class="red-color">{{ formatMoney(e_money) }}</span></p>
+				
+				<p>承接/量比：<span class="red-color">{{ e_buyMoneyRate }}%</span></p>
+				
+				<p>承接/市值比：<span class="red-color">{{ e_marketCountRate }}%</span></p>
+				
+				<p>
+					<span>股票代码：</span>
+					<input type="text" v-model="form.code" placeholder="请输入股票代码" maxlength="6" @keyup="onKeyUps" />
+					
+					<span>&emsp;日期：</span>
+					<input type="date" v-model="form.date" placeholder="请选择日期" />
+					
+					<button type="button" @click="getStockInfo" style="margin-left: 18px;">保存</button>
+				</p>
+			</div>
+			
+			<!-- Save History Datas -->
+			<div class="diff details">
+				<h2 style="width: 300px;">1. Save History Datas：</h2>
+				<span>指定日期：</span>
+				<input type="date" v-model="filter.date" placeholder="请选择日期" @change="filterDateChange" />
+				
+				<div style="display: inline-block;">
+					<span>&emsp;排序规则：</span>
+					<label>
+						<input type="radio" name="filter-type" value="default" v-model="filter.type" @change="filterTypeChange">
+						<span>默认</span>
+					</label>
+					
+					<label>
+						<input type="radio" name="filter-type" value="vol-price" v-model="filter.type" @change="filterTypeChange">
+						<span>总金额</span>
+					</label>
+					
+					<label>
+						<input type="radio" name="filter-type" value="vol-rate" v-model="filter.type" @change="filterTypeChange">
+						<span>量比</span>
+					</label>
+					
+					<label>
+						<input type="radio" name="filter-type" value="market-count" v-model="filter.type" @change="filterTypeChange">
+						<span>市值比</span>
+					</label>
+					
+					<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
+				</div>
+				
+				<ol style="margin-top: 25px;">
+					<li v-for="(item, index) of dataList" :key="index">
+						<span style="width: 200px;">股票名称：{{ item.name }}（{{ item.code }}）</span>
+						<span>日期：{{ item.date }}</span>
+						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
+						<span style="width: 125px;">承接/量比：{{ item.eBuyMoneyRate }}%</span>
+						<span>承接/市值比：{{ item.eMarketCountRate }}%</span>
+						
+						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item)">回显</a>
+						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(index, item)">删除</a>
+					</li>
+				</ol>
+			</div>
+		</div>
+	</body>
+	
+	<script src="../static/js/accounting.min.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[$commonMinxin],
+			data() {
+				return {
+					form: {
+						code: '', // 股票代码
+						date: window.moment().format('YYYY-MM-DD'), // 日期
+						
+						volPrice: 0, // 成交金额
+						buyPrice: 0, // 委托价
+						buyNumber: 0, // 委托数量
+						marketCount: 0, // 有效流通市值
+					},
+					
+					filter: {
+						date: '',
+						type: 'market-count',
+					},
+					
+					dataList: [],
+				}
+			},
+			mounted:function() {
+				var entrust_data = window.localStorage.getItem('entrust_data')
+				if(entrust_data) {
+					this.filterTypeChange()
+				}
+				
+				document.body.addEventListener('keydown', function(e) {
+					if(e.keyCode == 32) {
+						document.getElementById("volPrice").value = ''
+						document.getElementById("volPrice").focus()
+						window.scrollTo(0, 0)
+						e.preventDefault()
+					}
+				})
+			},
+			computed:{
+				/**
+				 * 承接/总金额计算
+				 */
+				e_money:function() {
+					var value = this.form.buyPrice * this.form.buyNumber * 10000 * 100
+					value = value == Infinity || isNaN(value) ? 0 : value
+					return value.toFixed(2)
+				},
+				/**
+				 * 承接/量比计算
+				 */
+				e_buyMoneyRate:function() {
+					var value = this.e_money / (this.form.volPrice * 10000 * 10000) * 100
+					value = value == Infinity || isNaN(value) ? 0 : value
+					return value.toFixed(2)
+				},
+				/**
+				 * 承接/市值比计算
+				 */
+				e_marketCountRate:function() {
+					var value = this.e_money / (this.form.marketCount * 10000 * 10000) * 100
+					value = value == Infinity || isNaN(value) ? 0 : value
+					return value.toFixed(2)
+				}
+			},
+			methods:{
+				/**
+				 * 初始化
+				 */
+				init:function() {
+					this.form.code = ''
+				},
+				/**
+				 * 按键监听
+				 */
+				onKeyUps:function(event) {
+					if(event.keyCode == 13) {
+						this.getStockInfo()
+					}
+				},
+				/**
+				 * 查询个股基本信息
+				 */
+				getStockInfo:function() {
+					var _this = this;
+					this.fetchStockInfo(this.form.code,function(data) {
+						var code = data.code
+						var name = data.name
+						_this.saveData(code, name)
+					})
+				},
+				/**
+				 * 数据保存
+				 */
+				saveData:function(code, name) {
+					let _this = this
+					if(code && name && this.form.date && this.e_money > 0 && this.e_buyMoneyRate > 0 && this.e_marketCountRate > 0) {
+						var list = this.dataList.filter(function(item) {
+							if(code == item.code && _this.form.date == item.date) {
+								return true
+							}
+						})
+						if(list.length > 0) return this.showToast(`数据已存在：${ name }`)
+						
+						
+						this.dataList.push({
+							code: code,
+							name: name,
+							date: this.form.date,
+							volPrice: this.form.volPrice,
+							buyPrice: this.form.buyPrice,
+							buyNumber: this.form.buyNumber,
+							marketCount: this.form.marketCount,
+							eMoney: this.e_money,
+							eBuyMoneyRate: this.e_buyMoneyRate,
+							eMarketCountRate: this.e_marketCountRate,
+						})
+						window.localStorage.setItem('entrust_data', JSON.stringify(this.dataList))
+						window.scrollTo(0, document.documentElement.scrollHeight)
+						console.log(JSON.stringify(this.dataList))
+					}else {
+						console.log(code, name, this.form.date, this.e_money, this.e_buyMoneyRate, this.e_marketCountRate)
+						this.showToast('参数不对')
+					}
+				},
+				/**
+				 * 数据删除
+				 */
+				remoteHistory:function(index, item) {
+					var flag = window.confirm(`确定删除【${ item.name } ${ item.date }】该条记录`)
+					if(flag) {
+						this.dataList.splice(index, 1)
+						window.localStorage.setItem('entrust_data', JSON.stringify(this.dataList))
+					}
+				},
+				/**
+				 * 排序规则
+				 */
+				filterTypeChange:function() {
+					var _this = this
+					var entrust_data = window.localStorage.getItem('entrust_data')
+					entrust_data = entrust_data ? JSON.parse(entrust_data) : []
+					
+					switch (this.filter.type){
+						case 'default':
+							this.dataList = entrust_data
+							break;
+						case 'vol-price':
+							entrust_data.sort(function(v1, v2) { return Number(v2.eMoney) - Number(v1.eMoney) })
+							this.dataList = entrust_data
+							break;
+						case 'vol-rate':
+							entrust_data.sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
+							this.dataList = entrust_data
+							break;
+						case 'market-count':
+							entrust_data.sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
+							this.dataList = entrust_data
+							break;
+					}
+					console.log(this.filter.type)
+					console.log(this.dataList)
+				},
+				/**
+				 * 指定日期筛选
+				 */
+				filterDateChange:function() {
+					var _this = this
+					var entrust_data = window.localStorage.getItem('entrust_data')
+					entrust_data = entrust_data ? JSON.parse(entrust_data) : []
+					
+					if(this.filter.date) {
+						var f_list = entrust_data.filter(function(item) {
+							if(item.date == _this.filter.date) {
+								return true
+							}
+						})
+						
+						this.dataList = f_list
+					}else {
+						this.filterTypeChange()
+					}
+				},
+				/**
+				 * 数据回显
+				 */
+				showHistory:function(item) {
+					Object.assign(this.form, item)
+				},
+				/**
+				 * 复制
+				 */
+				copys:function() {
+					var list = this.dataList.map(function(item) {
+						return item.code
+					})
+					window.prompt('Copy', list.join(','))
+				},
+				/**
+				 * 格式化金额
+				 */
+				formatMoney:function(money) {
+					return window.accounting.formatMoney(money, { symbol: '¥' })
+				},
+			}
+		})
+	</script>
+</html>

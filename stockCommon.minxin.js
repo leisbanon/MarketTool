@@ -98,7 +98,7 @@ var $commonMinxin = {
 			
 			tooltip ? _targetNode.removeChild(tooltip) : createTooltip();
 		},
-		showToast:function(message) {
+		showToast:function(message, time) {
 			var toastEl = document.body.querySelector('#toast');
 			toastEl ? document.body.removeChild(toastEl) : '';
 			
@@ -108,7 +108,7 @@ var $commonMinxin = {
 			toast.innerHTML = message;
 			document.body.appendChild(toast);
 			
-			setTimeout(function() { document.body.removeChild(toast) }, 800)
+			setTimeout(function() { document.body.removeChild(toast) }, time ? time : 1200)
 			
 			// toast component event stop propagation
 			toast.addEventListener('click',function(e) { e.stopPropagation() });
