@@ -15,6 +15,7 @@ var $commonMinxin = {
 				STOCK_REAL_KLINE_DATA_URL: 'https://route.showapi.com/131-50',
 				STOCK_INFO_URL:'https://route.showapi.com/131-43', // 查询股票信息 https://www.showapi.com/apiGateway/view/131/43#tabs
 				STOCK_HISOTRY_URL:'https://route.showapi.com/131-47', // 查询股票历史日线行情 https://www.showapi.com/apiGateway/view/131/47#tabs
+				STOCK_TIME_URL: 'https://route.showapi.com/131-46' // 查询股票历史行情详情（五档数据）https://www.showapi.com/apiGateway/view/131/46#tabs
 			},
 			
 			signdata:{ // 数据请求签名参数
@@ -73,6 +74,32 @@ var $commonMinxin = {
 				}
 			}
 		},
+		/**
+		 * 复制到剪切板
+		 * @param {Object} text
+		 */
+		copyText:function(t) {
+			var _this = this;
+			if (!navigator.clipboard) {
+				var ele = document.createElement("input");
+				ele.value = t;
+				document.body.appendChild(ele);
+				ele.select();
+				document.execCommand("copy");
+				document.body.removeChild(ele);
+				if (document.execCommand("copy")) {
+					this.showToast('复制成功');
+				} else {
+					this.showToast('复制失败');
+				}
+			} else {
+				navigator.clipboard.writeText(t).then(function () {
+					_this.showToast('复制成功');
+				}).catch(function () {
+					_this.showToast('复制失败');
+				})
+			}
+		},
 		showTooltip:function(message, event) {
 			var _targetNode = event.target;
 			_targetNode.style.position = 'relative';
@@ -108,7 +135,7 @@ var $commonMinxin = {
 			toast.innerHTML = message;
 			document.body.appendChild(toast);
 			
-			setTimeout(function() { document.body.removeChild(toast) }, time ? time : 1200)
+			setTimeout(function() { document.body.removeChild(toast) }, time ? time : 1300)
 			
 			// toast component event stop propagation
 			toast.addEventListener('click',function(e) { e.stopPropagation() });
@@ -225,6 +252,35 @@ var $commonMinxin = {
 			axios({
 				method: 'post',
 				url: this.globalUrl['STOCK_HISOTRY_URL'],
+				data: params,
+			}).then(function(res) {
+				var data = res.data;
+				if(data.showapi_res_code == 0) {
+					var resbody = data.showapi_res_body;
+					if(resbody.ret_code == 0) {
+						resbody.list.length > 0 ? callback(resbody.list) : alert('无查询数据...');
+					}else {
+						alert(resbody.remark)
+					}
+				}
+			})
+		},
+		/**
+		 * 查询股票历史行情详情（五档数据）
+		 * @param {Object} code
+		 * @param {Object} callback
+		 */
+		fetchStockTime:function(code, callback) {
+			var _this = this;
+			var params = JSON.parse(JSON.stringify(this.signdata));
+			Object.assign(params, {
+				stocks: code,
+				needIndex: 0,
+			})
+			
+			axios({
+				method: 'post',
+				url: this.globalUrl['STOCK_TIME_URL'],
 				data: params,
 			}).then(function(res) {
 				var data = res.data;
