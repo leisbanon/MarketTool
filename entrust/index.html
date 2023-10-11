@@ -98,8 +98,8 @@
 						<span style="width: 125px;">承接/量比：{{ item.eBuyMoneyRate }}%</span>
 						<span>承接/市值比：{{ item.eMarketCountRate }}%</span>
 						
-						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item)">回显</a>
-						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(index, item)">删除</a>
+						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
+						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(index, item, $event)">删除</a>
 					</li>
 				</ol>
 			</div>
@@ -238,7 +238,8 @@
 				/**
 				 * 数据删除
 				 */
-				remoteHistory:function(index, item) {
+				remoteHistory:function(index, item, e) {
+					e.stopPropagation()
 					var flag = window.confirm(`确定删除【${ item.name } ${ item.date }】该条记录`)
 					if(flag) {
 						this.dataList.splice(index, 1)
@@ -300,7 +301,8 @@
 				/**
 				 * 数据回显
 				 */
-				showHistory:function(item) {
+				showHistory:function(item, e) {
+					e.stopPropagation()
 					Object.assign(this.form, item)
 				},
 				/**
