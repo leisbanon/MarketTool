@@ -12,6 +12,7 @@
 		
 		.details ol li {padding: 8px 0;border-bottom: 1px #888 solid;}
 		.details ol li span { display: inline-block;margin-right: 22px;font-size: 14px !important; }
+		.li-select { background-color: #888888;border-bottom: 1px #DDD dashed !important; }
 		
 		.insert-number {margin-right: 22px;text-decoration: underline;cursor: pointer;user-select: none;}
 		.insert-number:active {opacity: 0.85;}
@@ -90,7 +91,7 @@
 				</div>
 				
 				<ol style="margin-top: 25px;">
-					<li v-for="(item, index) of dataList" :key="index">
+					<li v-for="(item, index) of dataList" :key="`li-${index}`" class="history-li" :id="`li-${index}`" @click="onLiClick(index)">
 						<span style="width: 200px;">股票名称：{{ item.name }}（{{ item.code }}）</span>
 						<span>日期：{{ item.date }}</span>
 						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
@@ -269,6 +270,10 @@
 							this.dataList = entrust_data
 							break;
 					}
+					
+					document.querySelectorAll('.history-li').forEach(function(el) {
+						el.classList.remove('li-select')
+					})
 					console.log(this.filter.type)
 					console.log(this.dataList)
 				},
@@ -306,6 +311,13 @@
 						return item.code
 					}).reverse()
 					window.prompt('Copy', list.join(','))
+				},
+				/**
+				 * 记录点击
+				 */
+				onLiClick:function(index) {
+					var id = 'li-' + index
+					document.getElementById(id).classList.toggle('li-select')
 				},
 				/**
 				 * 格式化金额
