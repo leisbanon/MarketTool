@@ -304,7 +304,7 @@
 				copys:function() {
 					var list = this.dataList.map(function(item) {
 						return item.code
-					})
+					}).reverse()
 					window.prompt('Copy', list.join(','))
 				},
 				/**
