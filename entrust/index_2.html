@@ -17,7 +17,7 @@
 		
 		.details ol li {padding: 8px 0;border-bottom: 1px #888 solid;}
 		.details ol li span { display: inline-block;margin-right: 22px;font-size: 14px !important; }
-		.li-select { background-color: #888888;border-bottom: 1px #DDD dashed !important; }
+		.li-select { background-color: rgba(0,0,0,0.33);border-bottom: 1px #DDD dashed !important; }
 		
 		.insert-number {margin-right: 22px;text-decoration: underline;cursor: pointer;user-select: none;}
 		.insert-number:active {opacity: 0.85;}
@@ -120,8 +120,8 @@
 					<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
 				</div>
 				
-				<ol style="margin-top: 25px;">
-					<li v-for="(item, index) of dataList" :key="`li-${index}`" class="history-li" :id="`li-${index}`" @click="onLiClick(index)">
+				<ol style="margin-top: 25px;" id="entrust-panel">
+					<li v-for="(item, index) of dataList" :key="`li-${index}`" class="history-li" :id="`li-${index}`" @click="onLiClick(index)" >
 						<span style="width: 200px;">股票名称：{{ item.name }}（{{ item.code }}）</span>
 						<span>日期：{{ item.date }}</span>
 						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
