@@ -92,7 +92,7 @@
 				<span>筛选代码：</span>
 				<input type="text" v-model="filter.code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
 				
-				<span>&emsp;筛选日期：</span>
+				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选日期：</span>
 				<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
 				
 				<div style="display: inline-block;">
@@ -330,20 +330,20 @@
 					var _this = this
 					var entrust_data = this.getOriginStorage()
 					
-					// 时间筛选
-					if(this.filter.date) {
+					// 筛选代码
+					if(this.filter.code) {
 						var f_list = entrust_data.filter(function(item) {
-							if(item.date == _this.filter.date) {
+							if(item.code == _this.filter.code) {
 								return true
 							}
 						})
 						entrust_data = f_list
 					}
 					
-					// 筛选代码
-					if(this.filter.code) {
+					// 时间筛选
+					if(this.filter.date && !this.filter.code) {
 						var f_list = entrust_data.filter(function(item) {
-							if(item.code == _this.filter.code) {
+							if(item.date == _this.filter.date) {
 								return true
 							}
 						})
