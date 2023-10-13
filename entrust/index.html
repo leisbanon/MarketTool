@@ -31,7 +31,7 @@
 				<button type="button" @click="getStockInfo" style="margin-left: 1px;">查询</button> <br/><br/><br/>
 				
 				<span>有效流通市值：</span>
-				<input id="market-count" type="number" v-model="form.marketCount" placeholder="请输入流通市值" @keyup="onKeyUpsToAllValue" /> 亿
+				<input id="market-count" type="number" v-model="form.marketCount" placeholder="请输入流通市值" /> 亿
 				
 				<span>&emsp;成交金额：</span>
 				<input type="number" v-model="form.volPrice" placeholder="请输入成交金额" /> 亿
@@ -51,62 +51,6 @@
 				<p>承接/量比：<span class="red-color">{{ e_buyMoneyRate }}%</span></p>
 				
 				<p>承接/市值比：<span class="red-color">{{ e_marketCountRate }}%</span></p>
-				
-				<p>
-					<span>日期：</span>
-					<input type="date" v-model="form.date" placeholder="请选择日期" />
-					
-					<button type="button" @click="saveData" style="margin-left: 18px;">保存</button>
-				</p>
-			</div>
-			
-			<!-- Save History Datas -->
-			<div class="diff details">
-				<h2 style="width: 300px;">1. Save History Datas：</h2>
-				<span>筛选代码：</span>
-				<input type="text" v-model="filter.code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
-				
-				<span>&emsp;筛选日期：</span>
-				<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
-				
-				<div style="display: inline-block;">
-					<span>&emsp;排序规则：</span>
-					<label>
-						<input type="radio" name="filter-type" value="default" v-model="filter.type" @change="loadDataChange">
-						<span>时间</span>
-					</label>
-					
-					<label>
-						<input type="radio" name="filter-type" value="vol-price" v-model="filter.type" @change="loadDataChange">
-						<span>总金额</span>
-					</label>
-					
-					<label>
-						<input type="radio" name="filter-type" value="vol-rate" v-model="filter.type" @change="loadDataChange">
-						<span>量比</span>
-					</label>
-					
-					<label>
-						<input type="radio" name="filter-type" value="market-count" v-model="filter.type" @change="loadDataChange">
-						<span>市值比</span>
-					</label>
-					
-					<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
-				</div>
-				
-				<ol style="margin-top: 25px;">
-					<li v-for="(item, index) of dataList" :key="`li-${index}`" class="history-li" :id="`li-${index}`" @click="onLiClick(index)">
-						<span style="width: 200px;">股票名称：{{ item.name }}（{{ item.code }}）</span>
-						<span>日期：{{ item.date }}</span>
-						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
-						<span style="width: 125px;">承接/量比：{{ item.eBuyMoneyRate }}%</span>
-						<span>承接/市值比：{{ item.eMarketCountRate }}%</span>
-						
-						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(index, item, $event)">删除</a>
-						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
-						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showCode(item, $event)">回显代码</a>
-					</li>
-				</ol>
 			</div>
 		</div>
 	</body>
@@ -131,32 +75,7 @@
 						buyNumber: 0, // 委托数量
 						marketCount: 0, // 有效流通市值
 					},
-					
-					filter: {
-						date: window.moment().format('YYYY-MM-DD'),
-						code: '',
-						type: 'market-count',
-					},
-					
-					dataList: [],
 				}
-			},
-			mounted:function() {
-				var _this = this
-				var entrust_data = this.getOriginStorage()
-				if(entrust_data.length > 0) {
-					this.loadDataChange()
-				}
-				
-				document.body.addEventListener('keydown', function(e) {
-					if(e.keyCode == 32) {
-						_this.form = JSON.parse(JSON.stringify(_this.$options.data().form))
-						_this.reset()
-						document.getElementById("stock-code").focus()
-						window.scrollTo(0, 0)
-						e.preventDefault()
-					}
-				})
 			},
 			computed:{
 				/**
@@ -186,14 +105,6 @@
 			},
 			methods:{
 				/**
-				 * 获取缓存数据
-				 */
-				getOriginStorage:function() {
-					var entrust_data = window.localStorage.getItem('entrust_data')
-					entrust_data = entrust_data ? JSON.parse(entrust_data) : []
-					return entrust_data
-				},
-				/**
 				 * 初始化
 				 */
 				init:function() {
@@ -206,14 +117,6 @@
 				onKeyUps:function(event) {
 					if(event.keyCode == 13) {
 						this.getStockInfo()
-					}
-				},
-				/**
-				 * 按键监听 - 流通市值
-				 */
-				onKeyUpsToAllValue:function() {
-					if(event.keyCode == 13) {
-						this.saveData()
 					}
 				},
 				/**
@@ -248,133 +151,6 @@
 						document.getElementById("market-count").select()
 						document.getElementById("market-count").focus()
 					})
-				},
-				/**
-				 * 数据保存
-				 */
-				saveData:function() {
-					var _this = this
-					var entrust_data = this.getOriginStorage()
-					
-					if(this.form.code && this.form.name && this.form.date && this.e_money > 0 && this.e_buyMoneyRate > 0 && this.e_marketCountRate > 0) {
-						var list = entrust_data.filter(function(item) {
-							if(_this.form.code == item.code && _this.form.date == item.date) {
-								return true
-							}
-						})
-						if(list.length > 0) return this.showToast(`数据已存在：${ this.form.name }`)
-						
-						var data = Object.assign({
-							eMoney: this.e_money,
-							eBuyMoneyRate: this.e_buyMoneyRate,
-							eMarketCountRate: this.e_marketCountRate,
-						}, this.form)
-						
-						entrust_data.unshift(data)
-						window.localStorage.setItem('entrust_data', JSON.stringify(entrust_data))
-						this.showToast('添加成功')
-						
-						this.loadDataChange()
-					}else {
-						console.log(this.form.code && this.form.name, this.form.date, this.e_money, this.e_buyMoneyRate, this.e_marketCountRate)
-						this.showToast('参数不对')
-					}
-				},
-				/**
-				 * 数据删除
-				 */
-				remoteHistory:function(index, item, e) {
-					e.stopPropagation()
-					var flag = window.confirm(`确定删除【${ item.name } ${ item.date }】该条记录`)
-					if(flag) {
-						this.dataList.splice(index, 1)
-						window.localStorage.setItem('entrust_data', JSON.stringify(this.dataList))
-					}
-				},
-				/**
-				 * 加载数据变更
-				 */
-				loadDataChange:function() {
-					var _this = this
-					var entrust_data = this.getOriginStorage()
-					
-					// 时间筛选
-					if(this.filter.date) {
-						var f_list = entrust_data.filter(function(item) {
-							if(item.date == _this.filter.date) {
-								return true
-							}
-						})
-						entrust_data = f_list
-					}
-					
-					// 筛选代码
-					if(this.filter.code) {
-						var f_list = entrust_data.filter(function(item) {
-							if(item.code == _this.filter.code) {
-								return true
-							}
-						})
-						entrust_data = f_list
-					}
-					
-					// 排序规则
-					switch (this.filter.type){
-						case 'default':
-							entrust_data.sort(function(v1, v2) {
-								return new Date(v1.date).getTime() - new Date(v2.date).getTime()
-							})
-							this.dataList = entrust_data
-							break;
-						case 'vol-price':
-							entrust_data.sort(function(v1, v2) { return Number(v2.eMoney) - Number(v1.eMoney) })
-							this.dataList = entrust_data
-							break;
-						case 'vol-rate':
-							entrust_data.sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
-							this.dataList = entrust_data
-							break;
-						case 'market-count':
-							entrust_data.sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
-							this.dataList = entrust_data
-							break;
-					}
-					
-					document.querySelectorAll('.history-li').forEach(function(el) {
-						el.classList.remove('li-select')
-					})
-					console.log(this.filter.type)
-				},
-				/**
-				 * 数据回显
-				 */
-				showHistory:function(item, e) {
-					e.stopPropagation()
-					Object.assign(this.form, item)
-				},
-				/**
-				 * 复制代码
-				 */
-				showCode:function(item, e) {
-					e.stopPropagation()
-					this.filter.code = item.code
-					this.loadDataChange()
-				},
-				/**
-				 * 复制
-				 */
-				copys:function() {
-					var list = this.dataList.map(function(item) {
-						return item.code
-					}).reverse()
-					window.prompt('Copy', list.join(','))
-				},
-				/**
-				 * 记录点击
-				 */
-				onLiClick:function(index) {
-					var id = 'li-' + index
-					document.getElementById(id).classList.toggle('li-select')
 				},
 				/**
 				 * 格式化金额

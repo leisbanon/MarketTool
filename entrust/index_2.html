@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>委托承接计算器</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link rel="stylesheet" type="text/css" href="../static/css/main.css"/>
+		<script src="../static/js/vue@v2.6.js"></script>
+	</head>
+	<style>
+		#entrust p, p span {font-size: 18px !important;}
+		
+		.input-label {float: left;}
+		._textarea {outline: none;border-radius: 6px;padding: 7px;width: 760px;height: 85px;}
+		._textarea::-webkit-scrollbar {width: 7px;background-color: #F1F1F1;border-radius: 6px;}
+		._textarea::-webkit-scrollbar-thumb {background-color: #C1C1C1;border: 1px solid #777;cursor: pointer;}
+		
+		.details ol li {padding: 8px 0;border-bottom: 1px #888 solid;}
+		.details ol li span { display: inline-block;margin-right: 22px;font-size: 14px !important; }
+		.li-select { background-color: #888888;border-bottom: 1px #DDD dashed !important; }
+		
+		.insert-number {margin-right: 22px;text-decoration: underline;cursor: pointer;user-select: none;}
+		.insert-number:active {opacity: 0.85;}
+		
+		.stock-ul {width: 100%;display: flex;flex-wrap: wrap;min-height: 50px;}
+		.stock-ul .li {margin-right: 18px;margin-top: 18px;}
+		.stock-ul .li span {width: 138px;display: inline-block;}
+		.stock-ul .li input {width: 88px !important;}
+		.no-loading { color: #999999;}
+		.close-console {position: absolute;top: -12px;right: 25px;cursor: pointer;user-select: none;}
+	</style>
+	
+	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
+		<div id="app">
+			<div class="console" v-if="show.name">
+				<h3>Statised</h3>
+				<p class="close-console red-color" @click="show = {}">关闭</p>
+				
+				<ul>
+					<li>名称：{{ show.name }}</li>
+					<li>日期：{{ show.date }}</li>
+					<li>有效流通市值：{{ show.marketCount }}亿</li>
+					<li>成交金额：{{ show.volPrice }}亿 </li>
+					<li>委托价：{{ show.buyPrice }}元</li>
+					<li>委托数量：{{ show.buyNumber }}万</li>
+				</ul>
+			</div>
+						
+			<!-- 查询 -->
+			<div class="diff">
+				<h2 style="color: white;">查 询：</h2>
+				
+				<div>
+					<span>日&emsp;&emsp;&emsp;&emsp;期：</span>
+					<input type="date" v-model="form.date" placeholder="请选择日期" />
+					
+					<form style="display: inline-block;padding: 7px;border: 1px #888 solid;margin-left: 16px;">
+						<label>
+							选择Excel导入：
+							<input type="file" id="excel_file" ref="excel_file" accept=".xls" @change="handleFiles(event.target)" style="width: 230px;"/>
+						</label>
+						<span class="clear-text-button">重置</span>
+					</form>
+					<button style="margin-left: 18px;" @click="loadingCode">Loading</button>
+				</div> <br/>
+				
+				<div style="display: inline-block;">
+					<span class="input-label">股票代码队列：</span>
+					<textarea class="_textarea" v-model="form.code" cols="11" rows="26" placeholder="600519-601398" @keyup="onKeyUps($event)"></textarea>
+				</div>
+				
+				<fieldset>
+					<legend>请输入流通市值</legend>
+					<div class="stock-ul">
+						<div class="li" v-for="item of codeList" :key="item.code">
+							<span :class="noLoadingCompute(item) ? 'no-loading' : ''">{{ item.name }}（{{ item.code }}）</span>
+							<input type="text" v-model="item.marketCount" /> 
+						</div>
+						
+						<div class="li">
+							<button @click="saveHistoryData">Save History Data</button>
+						</div>
+					</div>
+				</fieldset>
+			</div>
+			
+			<!-- Save History Datas -->
+			<div class="diff details">
+				<h2 style="width: 300px;">1. Save History Datas：</h2>
+				<span>筛选代码：</span>
+				<input type="text" v-model="filter.code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
+				
+				<span>&emsp;筛选日期：</span>
+				<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
+				
+				<div style="display: inline-block;">
+					<span>&emsp;排序规则：</span>
+					<label>
+						<input type="radio" name="filter-type" value="default" v-model="filter.type" @change="loadDataChange">
+						<span>时间</span>
+					</label>
+					
+					<label>
+						<input type="radio" name="filter-type" value="vol-price" v-model="filter.type" @change="loadDataChange">
+						<span>总金额</span>
+					</label>
+					
+					<label>
+						<input type="radio" name="filter-type" value="vol-rate" v-model="filter.type" @change="loadDataChange">
+						<span>量比</span>
+					</label>
+					
+					<label>
+						<input type="radio" name="filter-type" value="market-count" v-model="filter.type" @change="loadDataChange">
+						<span>市值比</span>
+					</label>
+					
+					<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
+				</div>
+				
+				<ol style="margin-top: 25px;">
+					<li v-for="(item, index) of dataList" :key="`li-${index}`" class="history-li" :id="`li-${index}`" @click="onLiClick(index)">
+						<span style="width: 200px;">股票名称：{{ item.name }}（{{ item.code }}）</span>
+						<span>日期：{{ item.date }}</span>
+						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
+						<span style="width: 125px;">承接/量比：{{ item.eBuyMoneyRate }}%</span>
+						<span>承接/市值比：{{ item.eMarketCountRate }}%</span>
+						
+						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(item, $event)">删除</a>
+						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
+						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showCode(item, $event)">回显代码</a>
+					</li>
+				</ol>
+			</div>
+		</div>
+	</body>
+	
+	<script type="text/javascript" src="../static/js/xlsx.full.min.js"></script>
+	<script src="../static/js/accounting.min.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript">
+		var app = new Vue({
+			el: '#app',
+			mixins:[$commonMinxin],
+			data() {
+				return {
+					fetchFinish: true,
+						
+					form: {
+						date: window.moment().format('YYYY-MM-DD'), // 日期
+						code: '', // 股票代码
+					},
+					
+					filter: {
+						date: window.moment().format('YYYY-MM-DD'),
+						code: '',
+						type: 'market-count',
+					},
+					
+					show: {},
+					
+					codeList: [],
+					dataList: [],
+					
+					// File
+					stockList:[],
+					pageList:[],
+				}
+			},
+			mounted:function() {
+				var _this = this
+				var entrust_data = this.getOriginStorage()
+				if(entrust_data.length > 0) {
+					this.loadDataChange()
+				}
+			},
+			computed:{
+				
+			},
+			methods:{
+				/**
+				 * 获取缓存数据
+				 */
+				getOriginStorage:function() {
+					var entrust_data = window.localStorage.getItem('entrust_data')
+					entrust_data = entrust_data ? JSON.parse(entrust_data) : []
+					return entrust_data
+				},
+				/**
+				 * 交易总金额计算
+				 */
+				e_money:function(form) {
+					var value = form.buyPrice * form.buyNumber * 10000 * 100
+					value = value == Infinity || isNaN(value) ? 0 : value
+					return value.toFixed(2)
+				},
+				/**
+				 * 承接/量比计算
+				 */
+				e_buyMoneyRate:function(form) {
+					var value = this.e_money(form) / (form.volPrice * 10000 * 10000) * 100
+					value = value == Infinity || isNaN(value) ? 0 : value
+					return value.toFixed(2)
+				},
+				/**
+				 * 承接/市值比计算
+				 */
+				e_marketCountRate:function(form) {
+					var value = this.e_money(form) / (form.marketCount * 10000 * 10000) * 100
+					value = value == Infinity || isNaN(value) ? 0 : value
+					return value.toFixed(2)
+				},
+				// 加载代码队列
+				loadingCode(){
+					var _this = this;
+					var codes = this.form.code.split('-')
+					
+					var isTrue = true
+					for(var code of codes) {
+						if(code.length != 6) {
+							isTrue = false
+							this.showToast(`代码异常：${ code }`)
+							break
+						}
+					}
+					if(!isTrue || !this.fetchFinish) return 
+					
+					// 轮询加载
+					var p_index = 0
+					var loadPoliing = function() {
+						if(!codes[p_index]) {
+							setTimeout(function() {
+								_this.fetchFinish = true
+							}, 500)
+							return
+						}
+						
+						_this.fetchStockTime(codes[p_index], function(list) {
+							var data = list[0]
+							var insertObject = new Object({
+								code: data.code,
+								name: data.name,
+								date: _this.form.date,
+								volPrice: data.tradeAmount / (10000 * 10000), // 成交金额
+								buyPrice: data.buy1_m, // 买一报价
+								buyNumber: data.buy1_n / 100 / 10000, // 买入数量
+								marketCount: '',
+							})
+							
+							var codeParam = _this.codeList.filter(function(item) { return item.code == data.code })[0]
+							if(codeParam && codeParam.code) {
+								var assginObject = new Object()
+								Object.keys(codeParam).forEach(function(key) {
+									if(codeParam[key]) {
+										assginObject[key] = codeParam[key]
+									}
+								})
+								
+								Object.assign(insertObject, assginObject)
+								
+								for(var v of _this.codeList) {
+									if(v.code == data.code) {
+										Object.assign(v, insertObject)
+										break
+									}
+								}
+							}else {
+								_this.codeList.push(insertObject)
+							}
+							
+							p_index++
+							setTimeout(function() {
+								loadPoliing()
+							}, 100)
+						})
+					}
+					this.fetchFinish = false
+					loadPoliing()
+					
+				},
+				// 保存记录数据
+				saveHistoryData() {
+					var _this = this
+					var entrust_data = this.getOriginStorage()
+					var list = JSON.parse(JSON.stringify(this.codeList))
+					if(list.length == 0) return this.showToast('代码队列未加载')
+					
+					for(var item of list) {
+						for(var key of Object.keys(item)) {
+							if(!item[key]) return this.showToast('信息补充不完整')
+						}
+					}
+					
+					list.forEach(function(item) {
+						item['eMoney'] = _this.e_money(item)
+						item['eBuyMoneyRate'] = _this.e_buyMoneyRate(item)
+						item['eMarketCountRate'] = _this.e_marketCountRate(item)
+					})
+					
+					// 重复判断
+					var repeats = []
+					for(var v1 of list) {
+						for(var v2 of entrust_data) {
+							if(v1.code == v2.code && v1.date == v2.date) {
+								repeats.push(`[${ v1.name } ${ v1.date }]`)
+								break
+							}
+						}
+					}
+					
+					if(repeats.length > 0) {
+						return this.showToast(`数据已存在：${ repeats.join(' ') }`, 2000)
+					}
+					
+					var newEntrustData = entrust_data.concat(list)
+					window.localStorage.setItem('entrust_data', JSON.stringify(newEntrustData))
+					
+					this.showToast('添加成功')
+					this.loadDataChange()
+					console.log(newEntrustData, 'newEntrustData')
+				},
+				/**
+				 * 加载数据变更
+				 */
+				loadDataChange:function() {
+					var _this = this
+					var entrust_data = this.getOriginStorage()
+					
+					// 时间筛选
+					if(this.filter.date) {
+						var f_list = entrust_data.filter(function(item) {
+							if(item.date == _this.filter.date) {
+								return true
+							}
+						})
+						entrust_data = f_list
+					}
+					
+					// 筛选代码
+					if(this.filter.code) {
+						var f_list = entrust_data.filter(function(item) {
+							if(item.code == _this.filter.code) {
+								return true
+							}
+						})
+						entrust_data = f_list
+					}
+					
+					// 排序规则
+					switch (this.filter.type){
+						case 'default':
+							entrust_data.sort(function(v1, v2) {
+								return new Date(v1.date).getTime() - new Date(v2.date).getTime()
+							})
+							this.dataList = entrust_data
+							break;
+						case 'vol-price':
+							entrust_data.sort(function(v1, v2) { return Number(v2.eMoney) - Number(v1.eMoney) })
+							this.dataList = entrust_data
+							break;
+						case 'vol-rate':
+							entrust_data.sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
+							this.dataList = entrust_data
+							break;
+						case 'market-count':
+							entrust_data.sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
+							this.dataList = entrust_data
+							break;
+					}
+					
+					document.querySelectorAll('.history-li').forEach(function(el) {
+						el.classList.remove('li-select')
+					})
+					console.log(this.filter.type)
+				},
+				/**
+				 * 数据删除
+				 */
+				remoteHistory:function(item, e) {
+					e.stopPropagation()
+					var flag = window.confirm(`确定删除【${ item.name } ${ item.date }】该条记录`)
+					if(flag) {
+						var entrust_data = this.getOriginStorage()
+						for(var i = 0;i < entrust_data.length;i++) {
+							var v = entrust_data[i]
+							if(item.code == v.code && item.date == v.date) {
+								entrust_data.splice(i, 1)
+								break
+							}
+						}
+						
+						window.localStorage.setItem('entrust_data', JSON.stringify(entrust_data))
+						this.loadDataChange()
+					}
+				},
+				/**
+				 * 数据回显
+				 */
+				showHistory:function(item, e) {
+					e.stopPropagation()
+					this.show = item
+				},
+				/**
+				 * 复制代码
+				 */
+				showCode:function(item, e) {
+					e.stopPropagation()
+					this.filter.code = item.code
+					this.loadDataChange()
+				},
+				/**
+				 * 复制
+				 */
+				copys:function() {
+					var list = this.dataList.map(function(item) {
+						return item.code
+					}).reverse()
+					window.prompt('Copy', list.join(','))
+				},
+				/**
+				 * 记录点击
+				 */
+				onLiClick:function(index) {
+					var id = 'li-' + index
+					document.getElementById(id).classList.toggle('li-select')
+				},
+				/**
+				 * 格式化金额
+				 */
+				formatMoney:function(money) {
+					return window.accounting.formatMoney(money, { symbol: '¥' })
+				},
+				// 按键监听 - 股票代码队列
+				onKeyUps(event) {
+					if(event.keyCode == 39) {
+						event.preventDefault()
+						this.loadingCode()
+					}
+				},
+				// 读取文件
+				handleFiles:function(input) {
+					var _this = this;
+					var file = (input || document.getElementById("excel_file") ).files[0];
+					
+					let reader = new FileReader();
+					reader.onload = function(e) {
+						var workbook = XLSX.read(e.target.result, {type: 'binary'});
+						
+						var _sheetNames = workbook.SheetNames
+						var _sheets = workbook.Sheets[_sheetNames]
+						// console.log(_sheets)
+						
+						var x_size = _sheets['!ref'].split(':')[1].replace('X', '')
+						
+						var stocks = [
+							{label: '自选股',key: 'name',symbol: ''},
+							{label: '代码',key: 'code',symbol: ''},
+							{label: '买价一',key: 'buyPrice',symbol: ''},
+							{label: '有效流通市值',key: 'marketCount',symbol: ''}
+						]
+						
+						for(var stock of stocks) {
+							for(var key of Object.keys(_sheets)) {
+								if(_sheets[key].v && _sheets[key].v.indexOf(stock.label) != -1) {
+									stock.symbol = key.substr(0 ,1)
+									break
+								}
+							}
+						}
+						
+						var stockList = []
+						for(var index = 2;index <= x_size;index++) {
+							var stockObject = new Object()
+							for(var item of stocks) {
+								stockObject[item.key] = _sheets[item.symbol + index].v
+							}
+							stockList.push(stockObject)
+						}
+						
+						stockList.forEach(function(item) {
+							var ml = item['marketCount'].length
+							item['marketCount'] = item['marketCount'].substring(0, ml - 1)
+						})
+						
+						
+						// 加载到代码队列
+						var codeList = stockList.map(function(item) {
+							return {
+								code: item.code,
+								name: item.name,
+								date: _this.form.date,
+								volPrice: '', // 成交金额
+								buyPrice: item.buyPrice, // 买一报价
+								buyNumber: '', // 买入数量
+								marketCount: item.marketCount, // 有效流通市值
+							}
+						})
+						
+						var codes = codeList.map(function(item) { return item.code })
+						_this.form.code = codes.join('-')
+						_this.codeList = codeList
+					};
+					reader.readAsBinaryString(file);
+				},
+				noLoadingCompute(item) {
+					var isClass = false
+					for(var key of Object.keys(item)) {
+						if(!item[key]) {
+							isClass = true
+							break
+						}
+					}
+					return isClass
+				}
+			}
+		})
+	</script>
+</html>

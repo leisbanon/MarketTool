@@ -16,7 +16,7 @@ body { height: 100%;background-color: rgba(40,44,53,0.75);color: white;}
 .data-diff { position: relative;margin-bottom: 100px; }
 .average-box ol,ul li { margin-bottom: 11px; }
 
-.console {position: absolute;top: 0;right: 0;line-height: 28px;padding-right: 22px;background: rgba(0,0,0,0.4);user-select: auto;z-index: 100;border-bottom-left-radius: 8px; }
+.console {min-width: 288px;position: fixed;top: 0;right: 0;line-height: 28px;padding-right: 22px;background: rgba(0,0,0,0.4);user-select: auto;z-index: 100;border-bottom-left-radius: 8px; }
 .console h3 {margin: 0;padding: 5px 0 0 12px;position: relative;}
 .console h3:after {content: '';border-bottom: 1px #DDD solid;position: absolute;bottom: 0;left: 0;right: 0;transform: scaleY(0.5);}
 .console ul li {font-size: 15px;text-decoration: underline; }
