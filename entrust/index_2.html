@@ -133,7 +133,7 @@
 						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
 						<span style="width: 125px;">承接/量比：{{ item.eBuyMoneyRate }}%</span>
 						<span>承接/市值比：{{ item.eMarketCountRate }}%</span>
-						<span>有效流通市值：{{ item.marketCount  }}亿</span>
+						<span>有效流通市值：<span class="orange-color">{{ item.marketCount  }}亿</span></span>
 						
 						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(item, $event)">删除</a>
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
