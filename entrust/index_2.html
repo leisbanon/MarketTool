@@ -344,7 +344,7 @@
 					// 筛选代码
 					if(this.filter.code) {
 						var f_list = entrust_data.filter(function(item) {
-							if(item.code == _this.filter.code) {
+							if(item.code.indexOf(_this.filter.code) != -1 || item.name.indexOf(_this.filter.code) != -1) {
 								return true
 							}
 						})
