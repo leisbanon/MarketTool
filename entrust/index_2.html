@@ -95,7 +95,7 @@
 				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选日期：</span>
 				<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
 				
-				<span>&emsp;筛选市值/大于/亿：</span>
+				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选市值/大于/亿：</span>
 				<input type="text" v-model="filter.marketCount" id="filter-size" placeholder="市值" maxlength="4" @input="loadDataChange" style="width: 55px;" />
 				
 				<div style="display: inline-block;">
@@ -362,7 +362,7 @@
 					}
 					
 					// 市值筛选
-					if(this.filter.marketCount) {
+					if(this.filter.marketCount && !this.filter.code) {
 						var f_list = entrust_data.filter(function(item) {
 							if(Number(item.marketCount) >= Number(_this.filter.marketCount)) {
 								return true
