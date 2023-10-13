@@ -27,6 +27,7 @@
 		.stock-ul .li span {width: 138px;display: inline-block;}
 		.stock-ul .li input {width: 88px !important;}
 		.no-loading { color: #999999;}
+		.console {background: rgba(40,44,53,0.9);}
 		.close-console {position: absolute;top: -12px;right: 25px;cursor: pointer;user-select: none;}
 	</style>
 	
@@ -41,7 +42,6 @@
 				<ul>
 					<li>名称：{{ show.name }}</li>
 					<li>日期：{{ show.date }}</li>
-					<li>有效流通市值：{{ show.marketCount }}亿</li>
 					<li>成交金额：{{ show.volPrice }}亿 </li>
 					<li>委托价：{{ show.buyPrice }}元</li>
 					<li>委托数量：{{ show.buyNumber }}万</li>
@@ -90,7 +90,7 @@
 			<div class="diff details">
 				<h2 style="width: 300px;">1. Save History Datas：</h2>
 				<span>筛选代码：</span>
-				<input type="text" v-model="filter.code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
+				<input type="text" v-model="filter.code" id="filter-code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
 				
 				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选日期：</span>
 				<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
@@ -120,17 +120,24 @@
 					<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
 				</div>
 				
-				<ol style="margin-top: 25px;" id="entrust-panel">
-					<li v-for="(item, index) of dataList" :key="`li-${index}`" class="history-li" :id="`li-${index}`" @click="onLiClick(index)" >
+				<ol style="margin-top: 25px;" id="entrust-panel" @mousedown="onOlMouse">
+					<li
+						v-for="(item, index) of dataList"
+						:key="`li-${index}`"
+						class="history-li" 
+						:id="`li-${index}`" 
+						@click="onLiClick(index)"
+					>
 						<span style="width: 200px;">股票名称：{{ item.name }}（{{ item.code }}）</span>
 						<span>日期：{{ item.date }}</span>
 						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
 						<span style="width: 125px;">承接/量比：{{ item.eBuyMoneyRate }}%</span>
 						<span>承接/市值比：{{ item.eMarketCountRate }}%</span>
+						<span>有效流通市值：{{ item.marketCount  }}亿</span>
 						
 						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(item, $event)">删除</a>
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
-						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showCode(item, $event)">回显代码</a>
+						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showCode(item, $event)">筛选代码</a>
 					</li>
 				</ol>
 			</div>
@@ -405,12 +412,16 @@
 					this.show = item
 				},
 				/**
-				 * 复制代码
+				 * 回显代码
 				 */
 				showCode:function(item, e) {
 					e.stopPropagation()
 					this.filter.code = item.code
 					this.loadDataChange()
+					
+					this.$nextTick(function() {
+						document.getElementById("filter-code").select()
+					})
 				},
 				/**
 				 * 复制
@@ -425,8 +436,31 @@
 				 * 记录点击
 				 */
 				onLiClick:function(index) {
+					console.log('Click')
+					if(window.OL_TRIGGER_MOVE) return
+					
 					var id = 'li-' + index
 					document.getElementById(id).classList.toggle('li-select')
+				},
+				// 记录列表容器  - 鼠标事件
+				onOlMouse(event) {
+					switch (event.type){
+						case 'mousedown':
+							// console.log('mousedown')
+							document.getElementById('entrust-panel').addEventListener('mousemove', this.onOlMouse)
+							document.getElementById('entrust-panel').addEventListener('mouseup', this.onOlMouse)
+							window.OL_TRIGGER_MOVE = false
+							break;
+						case 'mousemove':
+							// console.log('mousemove')
+							window.OL_TRIGGER_MOVE = true
+							break;
+						case 'mouseup':
+							// console.log('mouseup')
+							document.getElementById('entrust-panel').removeEventListener('mousemove', this.onOlMouse)
+							document.getElementById('entrust-panel').removeEventListener('mouseup', this.onOlMouse)
+							break;
+					}
 				},
 				/**
 				 * 格式化金额
