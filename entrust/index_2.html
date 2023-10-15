@@ -255,7 +255,6 @@
 							var insertObject = new Object({
 								code: data.code,
 								name: data.name,
-								date: _this.form.date,
 								volPrice: data.tradeAmount / (10000 * 10000), // 成交金额
 								buyPrice: data.buy1_m, // 买一报价
 								buyNumber: data.buy1_n / 100 / 10000, // 买入数量
@@ -307,6 +306,7 @@
 					}
 					
 					list.forEach(function(item) {
+						item['date'] = _this.form.date,
 						item['eMoney'] = _this.e_money(item)
 						item['eBuyMoneyRate'] = _this.e_buyMoneyRate(item)
 						item['eMarketCountRate'] = _this.e_marketCountRate(item)
@@ -502,12 +502,15 @@
 						var _sheets = workbook.Sheets[_sheetNames]
 						// console.log(_sheets)
 						
-						var x_size = _sheets['!ref'].split(':')[1].replace('X', '')
+						var x_size = _sheets['!ref'].split(":")[1].replace(/[A-Z]/ig, '')
+						console.log(x_size, "x_size")
 						
 						var stocks = [
 							{label: '自选股',key: 'name',symbol: ''},
 							{label: '代码',key: 'code',symbol: ''},
+							{label: '总金额',key: 'volPrice',symbol: ''},
 							{label: '买价一',key: 'buyPrice',symbol: ''},
+							{label: '买量一',key: 'buyNumber',symbol: ''},
 							{label: '有效流通市值',key: 'marketCount',symbol: ''}
 						]
 						
@@ -520,6 +523,12 @@
 							}
 						}
 						
+						var noSymbol = stocks.filter(function(item) {
+							return !item.symbol
+						})
+						var symMsg = noSymbol.map(function(item) { return item.label })
+						if(noSymbol.length > 0) return _this.showToast(`No Symbol Key：${ symMsg.join() }`, 2000)
+						
 						var stockList = []
 						for(var index = 2;index <= x_size;index++) {
 							var stockObject = new Object()
@@ -530,20 +539,43 @@
 						}
 						
 						stockList.forEach(function(item) {
-							var ml = item['marketCount'].length
-							item['marketCount'] = item['marketCount'].substring(0, ml - 1)
+							// 处理成交总金额
+							var y_vp_match = item.volPrice.match(/亿/g)
+							var w_vp_match = item.volPrice.match(/万/g)
+							if(y_vp_match) {
+								item.volPrice = item.volPrice.replace(/亿/g, '')
+							}else if(w_vp_match) {
+								item.volPrice = item.volPrice.replace(/万/g, '') / 10000
+							}
+							
+							// 处理买量一
+							var w_b_match = item.buyNumber.match(/万/g)
+							if(w_b_match) {
+								item.buyNumber = item.buyNumber.replace(/万$/g, '')
+							}else {
+								item.buyNumber = item.buyNumber / 10000
+							}
+							
+							// 处理有效流通市值
+							var y_mc_match = item.marketCount.match(/亿/g)
+							var w_mc_match = item.marketCount.match(/万/g)
+							if(y_mc_match) {
+								item.marketCount = item.marketCount.replace(/亿/g, '')
+							}else if(w_mc_match) {
+								item.marketCount = item.marketCount.replace(/万/g, '') / 10000
+							}
 						})
-						
+						// console.log(stockList, 'stockList')
+						// return
 						
 						// 加载到代码队列
 						var codeList = stockList.map(function(item) {
 							return {
 								code: item.code,
 								name: item.name,
-								date: _this.form.date,
-								volPrice: '', // 成交金额
+								volPrice: item.volPrice, // 成交金额
 								buyPrice: item.buyPrice, // 买一报价
-								buyNumber: '', // 买入数量
+								buyNumber: item.buyNumber, // 买入数量
 								marketCount: item.marketCount, // 有效流通市值
 							}
 						})
