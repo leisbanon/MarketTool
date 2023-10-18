@@ -17,6 +17,8 @@
 		
 		.details ol li {padding: 8px 0;border-bottom: 1px #888 solid;}
 		.details ol li span { display: inline-block;margin-right: 22px;font-size: 14px !important; }
+		.float-size span { display: inline-block;margin-right: 3px !important;font-size: 14px !important; }
+		
 		.li-select { background-color: rgba(0,0,0,0.33);border-bottom: 1px #DDD dashed !important; }
 		
 		.insert-number {margin-right: 22px;text-decoration: underline;cursor: pointer;user-select: none;}
@@ -29,6 +31,8 @@
 		.no-loading { color: #999999;}
 		.console {background: rgba(40,44,53,0.9);}
 		.close-console {position: absolute;top: -12px;right: 25px;cursor: pointer;user-select: none;}
+		
+		#importFile {position: absolute;left: 0;top: 0;bottom: 0;width: 100% !important;opacity: 0;}
 	</style>
 	
 	<body>
@@ -92,11 +96,8 @@
 				<span>筛选代码：</span>
 				<input type="text" v-model="filter.code" id="filter-code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
 				
-				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选日期：</span>
+				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;&emsp;筛选日期：</span>
 				<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
-				
-				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选市值/大于/亿：</span>
-				<input type="text" v-model="filter.marketCount" id="filter-size" placeholder="市值" maxlength="4" @input="loadDataChange" style="width: 55px;" />
 				
 				<div style="display: inline-block;">
 					<span>&emsp;排序规则：</span>
@@ -121,9 +122,32 @@
 					</label>
 					
 					<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
+					
+					<button type="button" style="margin-left: 18px;">
+						<span>导入</span>
+						<input @change="imports" id="importFile" name="importFile" type="file" accept=".txt" />
+					</button>
+					
+					<button type="button" style="margin-left: 18px;" @click="exports">导出</button>
+				</div><br/><br/>
+				
+				<div>
+					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">筛选流通市值：</span>
+					<input type="text" v-model="filter.marketCount" placeholder="流通市值" maxlength="4" @input="loadDataChange" style="width: 105px;" />
+					
+					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选量比：</span>
+					<input type="text" v-model="filter.eBuyMoneyRate" placeholder="量比" maxlength="5" @input="loadDataChange" />
+					
+					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选市值比：</span>
+					<input type="text" v-model="filter.eMarketCountRate" placeholder="市值比" maxlength="4" @input="loadDataChange" />
+					
+					<label>
+						<span style="position: relative;left: 13px;">&emsp;显示示计算（Float）：</span>
+						<input type="checkbox" style="width: 32px;margin: 0px" v-model="showFloat" />
+					</label>
 				</div>
 				
-				<ol style="margin-top: 25px;width: 100%;padding-left: 25px;" id="entrust-panel" @mousedown="onOlMouse">
+				<ol style="margin-top: 25px;width: fit-content;padding-left: 25px;transform: scale(0.91);transform-origin: top left;" id="entrust-panel" @mousedown="onOlMouse">
 					<li
 						v-for="(item, index) of dataList"
 						:key="`li-${index}`"
@@ -131,16 +155,37 @@
 						:id="`li-${index}`" 
 						@click="onLiClick(index)"
 					>
-						<span style="width: 200px;">股票名称：{{ item.name }}（{{ item.code }}）</span>
+						<span style="width: 170px;">名称：{{ item.name }}（{{ item.code }}）</span>
 						<span>日期：{{ item.date }}</span>
 						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
 						<span style="width: 125px;">承接/量比：{{ item.eBuyMoneyRate }}%</span>
 						<span>承接/市值比：{{ item.eMarketCountRate }}%</span>
-						<span>有效流通市值：<span class="orange-color">{{ item.marketCount  }}亿</span></span>
+						<span style="width: 160px;">有效流通市值：<span class="orange-color">{{ item.marketCount  }}亿</span></span>
+						<span>行业：<span :title="item.concept" class="orange-color" style="width: 62px;overflow: hidden;text-overflow: ellipsis;">{{ item.concept || '/' }}</span></span>
 						
 						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(item, $event)">删除</a>
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showCode(item, $event)">筛选代码</a>
+						
+						<div v-if="showFloat" class="float-size" style="margin-top: 10px;">
+							<span class="red-color" style="margin-right: 30px !important;">{{ item.buyPrice }}↑</span>
+							
+							<span v-for="(rate, index) of floatPrice" :key="`a_${ index }`">
+								<span class="orange-color">{{ rate }}%</span>
+								<span>-></span>
+								<span style="margin-right: 30px !important;">{{ openPriceDefineRate(Number(item.buyPrice), Number(rate)) }}</span>
+							</span>
+						</div>
+						
+						<div v-if="showFloat" class="float-size" style="margin-top: 10px;">
+							<span class="green-color" style="margin-right: 30px !important;">{{ item.buyPrice }}↓</span>
+							
+							<span v-for="(rate, index) of floatPrice" :key="`a_${ index }`">
+								<span class="orange-color">-{{ rate }}%</span>
+								<span>-></span>
+								<span style="margin-right: 30px !important;">{{ openPriceDefineRate(Number(item.buyPrice), Number(-rate)) }}</span>
+							</span>
+						</div>
 					</li>
 				</ol>
 			</div>
@@ -148,6 +193,7 @@
 	</body>
 	
 	<script type="text/javascript" src="../static/js/xlsx.full.min.js"></script>
+	<script type="text/javascript" src="../static/js/FileSaver.min.js" charset="utf-8"></script>
 	<script src="../static/js/accounting.min.js" type="text/javascript" charset="utf-8"></script>
 	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
@@ -159,6 +205,8 @@
 			data() {
 				return {
 					fetchFinish: true,
+					floatPrice: [0.33, 1.33, 1.66, 2.33],
+					showFloat: false,
 						
 					form: {
 						date: window.moment().format('YYYY-MM-DD'), // 日期
@@ -168,7 +216,9 @@
 					filter: {
 						date: window.moment().format('YYYY-MM-DD'),
 						code: '',
-						marketCount: '',
+						marketCount: '', // 流值 50%
+						eMarketCountRate: '', // 市值比 10.33%
+						eBuyMoneyRate: '', // 量比 2%
 						type: 'market-count',
 					},
 					
@@ -371,6 +421,26 @@
 						entrust_data = f_list
 					}
 					
+					// 市值比筛选
+					if(this.filter.eMarketCountRate && !this.filter.code) {
+						var f_list = entrust_data.filter(function(item) {
+							if(Number(item.eMarketCountRate) >= Number(_this.filter.eMarketCountRate)) {
+								return true
+							}
+						})
+						entrust_data = f_list
+					}
+					
+					// 量比筛选
+					if(this.filter.eBuyMoneyRate && !this.filter.code) {
+						var f_list = entrust_data.filter(function(item) {
+							if(Number(item.eBuyMoneyRate) >= Number(_this.filter.eBuyMoneyRate)) {
+								return true
+							}
+						})
+						entrust_data = f_list
+					}
+					
 					// 排序规则
 					switch (this.filter.type){
 						case 'default':
@@ -438,6 +508,19 @@
 					})
 				},
 				/**
+				 * 获取文件大小
+				 */
+				getFileSize:function(size) {
+					if (!size) return "";
+					var num = 1024.00; // Byte
+					
+					if (size < num) return size + "B";
+					if (size < Math.pow(num, 2)) return (size / num).toFixed(2) + "KB"; // KB
+					if (size < Math.pow(num, 3)) return (size / Math.pow(num, 2)).toFixed(2) + "MB"; // M
+					if (size < Math.pow(num, 4)) return (size / Math.pow(num, 3)).toFixed(2) + "G"; // G
+					return (size / Math.pow(num, 4)).toFixed(2) + "T"; // T
+				},
+				/**
 				 * 复制
 				 */
 				copys:function() {
@@ -445,6 +528,43 @@
 						return item.code
 					}).reverse()
 					window.prompt('Copy', list.join(','))
+				},
+				/**
+				 * 导入
+				 */
+				imports:function(e) {
+					var _this = this
+					var file = e.target.files[0]
+					var name = file.name
+					var size = this.getFileSize(file.size)
+					var isTrue = window.confirm(`确认导入数据文件：${ name }, 文件大小：${ size }, 导入后本地数据将会覆盖!`)
+					if(!isTrue) return
+					
+					var readerReport = new FileReader()
+					readerReport.readAsText(file, "UTF-8")
+					readerReport.onload = function () {
+						var entrust_data = readerReport.result
+						if(Object.prototype.toString.call(JSON.parse(entrust_data)) === '[object Array]') {
+							window.localStorage.setItem('entrust_data', entrust_data)
+							_this.loadDataChange()
+						}else {
+							_this.showToast('数据不正确')
+						}
+					}
+				},
+				/**
+				 * 导出
+				 */
+				exports:function() {
+					var day = moment().format('YYYYMMDD');
+					var filename = `entrust_data`
+					
+					var isPromptText = window.prompt('请输入文件名称: ', filename)
+					if(isPromptText) {
+						var entrust_data = this.getOriginStorage()
+						var blob = new Blob([JSON.stringify(entrust_data)], {type: "text/plain;charset=utf-8"})
+						saveAs(blob, isPromptText + ".txt")
+					}
 				},
 				/**
 				 * 记录点击
@@ -508,6 +628,7 @@
 						var stocks = [
 							{label: '自选股',key: 'name',symbol: ''},
 							{label: '代码',key: 'code',symbol: ''},
+							{label: '行业',key: 'concept',symbol: ''},
 							{label: '总金额',key: 'volPrice',symbol: ''},
 							{label: '买价一',key: 'buyPrice',symbol: ''},
 							{label: '买量一',key: 'buyNumber',symbol: ''},
@@ -573,6 +694,7 @@
 							return {
 								code: item.code,
 								name: item.name,
+								concept: item.concept,
 								volPrice: item.volPrice, // 成交金额
 								buyPrice: item.buyPrice, // 买一报价
 								buyNumber: item.buyNumber, // 买入数量
@@ -595,6 +717,11 @@
 						}
 					}
 					return isClass
+				},
+				// 开盘价指定涨跌幅度计算
+				openPriceDefineRate:function(price, rate) {
+					var result = Number(price) + (price * rate / 100)
+					return (result || 0).toFixed(2);
 				}
 			}
 		})
