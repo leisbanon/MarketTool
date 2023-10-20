@@ -96,7 +96,7 @@
 				<span>筛选代码：</span>
 				<input type="text" v-model="filter.code" id="filter-code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
 				
-				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;&emsp;筛选日期：</span>
+				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选日期：</span>
 				<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
 				
 				<div style="display: inline-block;">
@@ -141,10 +141,18 @@
 					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选市值比：</span>
 					<input type="text" v-model="filter.eMarketCountRate" placeholder="市值比" maxlength="4" @input="loadDataChange" />
 					
-					<label>
-						<span style="position: relative;left: 13px;">&emsp;显示示计算（Float）：</span>
-						<input type="checkbox" style="width: 32px;margin: 0px" v-model="showFloat" />
+					<label style="display: inline-flex;align-items: center;">
+						<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none', 'position': 'relative', 'left': '5px' }">&emsp;Strategy(Group):</span>
+						<input type="checkbox" style="width: 32px;margin: 0px" v-model="showStrategyGroup" @change="loadDataChange" />
+						<input type="text" v-model="strategyGroupRange" placeholder="Range" @input="loadDataChange" :disabled="!showStrategyGroup" style="width: 50px;">
 					</label>
+					
+					<span style="display: inline-flex;margin-left: 55px;border-left: 1px #888 dashed;">
+						<label style="display: flex;align-items: center;margin-right: 18px;">
+							<span style="position: relative;left: 5px;">&emsp;显示示计算(Float):</span>
+							<input type="checkbox" style="width: 32px;margin: 0px" v-model="showFloat" />
+						</label>
+					</span>
 				</div>
 				
 				<ol style="margin-top: 25px;width: fit-content;padding-left: 25px;transform: scale(0.91);transform-origin: top left;" id="entrust-panel" @mousedown="onOlMouse">
@@ -207,6 +215,9 @@
 					fetchFinish: true,
 					floatPrice: [0.33, 1.33, 1.66, 2.33],
 					showFloat: false,
+					
+					showStrategyGroup: false, // 是否开启策略
+					strategyGroupRange: 5, // 指定策略集范围/前个数
 						
 					form: {
 						date: window.moment().format('YYYY-MM-DD'), // 日期
@@ -214,7 +225,8 @@
 					},
 					
 					filter: {
-						date: window.moment().format('YYYY-MM-DD'),
+						// date: window.moment().format('YYYY-MM-DD'),
+						date: '2023-10-17',
 						code: '',
 						marketCount: '', // 流值 50%
 						eMarketCountRate: '', // 市值比 10.33%
@@ -386,10 +398,12 @@
 				},
 				/**
 				 * 加载数据变更
+				 * @param {Object} symbol 指定筛选类型返回的数据
 				 */
 				loadDataChange:function() {
 					var _this = this
 					var entrust_data = this.getOriginStorage()
+					var dataList = []
 					
 					// 筛选代码
 					if(this.filter.code) {
@@ -441,28 +455,76 @@
 						entrust_data = f_list
 					}
 					
-					// 排序规则
-					switch (this.filter.type){
-						case 'default':
-							entrust_data.sort(function(v1, v2) {
-								return new Date(v1.date).getTime() - new Date(v2.date).getTime()
-							})
-							this.dataList = entrust_data
-							break;
-						case 'vol-price':
-							entrust_data.sort(function(v1, v2) { return Number(v2.eMoney) - Number(v1.eMoney) })
-							this.dataList = entrust_data
-							break;
-						case 'vol-rate':
-							entrust_data.sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
-							this.dataList = entrust_data
-							break;
-						case 'market-count':
-							entrust_data.sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
-							this.dataList = entrust_data
-							break;
+					// 日期排序
+					var sort_de = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return new Date(v1.date).getTime() - new Date(v2.date).getTime() })
+					// 总金额排序
+					var sort_vp = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eMoney) - Number(v1.eMoney) })
+					// 量比排序
+					var sort_vr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
+					// 市值比排序
+					var sort_mc = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
+					
+					// 关闭组合策略
+					if(!this.showStrategyGroup || this.filter.code) {
+						switch (this.filter.type){
+							case 'default':
+								entrust_data = sort_de
+								break;
+							case 'vol-price':
+								entrust_data = sort_vp
+								break;
+							case 'vol-rate':
+								entrust_data = sort_vr
+								break;
+							case 'market-count':
+								entrust_data = sort_mc
+								break;
+						}
 					}
 					
+					// 开启组合策略
+					if(this.showStrategyGroup && !this.filter.code) {
+						var sort_vp_before = sort_vp.slice(0, this.strategyGroupRange || sort_vp.length)
+						var sort_vr_before = sort_vr.slice(0, this.strategyGroupRange || sort_vr.length)
+						var sort_mc_before = sort_mc.slice(0, this.strategyGroupRange || sort_mc.length)
+						
+						var svp_map = sort_vp_before.map(function(item) { return item.name })
+						var svr_map = sort_vr_before.map(function(item) { return item.name })
+						var smc_map = sort_mc_before.map(function(item) { return item.name })
+						
+						var sortGroup = new Array().concat(sort_vp_before, sort_vr_before, sort_mc_before)
+						
+						var strategyGoupData = new Array()
+						for(var item of sortGroup) {
+							var sgd_map = strategyGoupData.map(function(item) { return item.name })
+							if(
+								svp_map.indexOf(item.name) != -1 &&
+								svr_map.indexOf(item.name) != -1 &&
+								smc_map.indexOf(item.name) != -1 &&
+								sgd_map.indexOf(item.name) == -1
+							) {
+								strategyGoupData.push(item)
+							}
+						}
+						console.log(strategyGoupData, 'strategyGoupData>>')
+						
+						switch (this.filter.type){
+							case 'default':
+								entrust_data = JSON.parse(JSON.stringify(strategyGoupData)).sort(function(v1, v2) { return new Date(v1.date).getTime() - new Date(v2.date).getTime() })
+								break;
+							case 'vol-price':
+								entrust_data = JSON.parse(JSON.stringify(strategyGoupData)).sort(function(v1, v2) { return Number(v2.eMoney) - Number(v1.eMoney) })
+								break;
+							case 'vol-rate':
+								entrust_data = JSON.parse(JSON.stringify(strategyGoupData)).sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
+								break;
+							case 'market-count':
+								entrust_data = JSON.parse(JSON.stringify(strategyGoupData)).sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
+								break;
+						}
+					}
+					
+					this.dataList = entrust_data
 					document.querySelectorAll('.history-li').forEach(function(el) {
 						el.classList.remove('li-select')
 					})
@@ -719,10 +781,10 @@
 					return isClass
 				},
 				// 开盘价指定涨跌幅度计算
-				openPriceDefineRate:function(price, rate) {
+				openPriceDefineRate(price, rate) {
 					var result = Number(price) + (price * rate / 100)
 					return (result || 0).toFixed(2);
-				}
+				},
 			}
 		})
 	</script>
