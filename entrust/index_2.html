@@ -92,7 +92,7 @@
 			
 			<!-- Save History Datas -->
 			<div class="diff details">
-				<h2 style="width: 300px;">1. Save History Datas：</h2>
+				<h2 style="width: 433px;">1. Save History Datas【Filter】：</h2>
 				<span>筛选代码：</span>
 				<input type="text" v-model="filter.code" id="filter-code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
 				
@@ -141,15 +141,26 @@
 					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选市值比：</span>
 					<input type="text" v-model="filter.eMarketCountRate" placeholder="市值比" maxlength="4" @input="loadDataChange" />
 					
-					<label style="display: inline-flex;align-items: center;">
-						<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none', 'position': 'relative', 'left': '5px' }">&emsp;Strategy(Group):</span>
-						<input type="checkbox" style="width: 32px;margin: 0px" v-model="showStrategyGroup" @change="loadDataChange" />
-						<input type="text" v-model="strategyGroupRange" placeholder="Range" @input="loadDataChange" :disabled="!showStrategyGroup" style="width: 50px;">
+					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;组合关系：</span>
+					<label>
+						<input type="radio" name="filter-join" value="group-and" v-model="filter.join" @change="loadDataChange">
+						<span>And</span>
 					</label>
 					
-					<span style="display: inline-flex;margin-left: 55px;border-left: 1px #888 dashed;">
-						<label style="display: flex;align-items: center;margin-right: 18px;">
-							<span style="position: relative;left: 5px;">&emsp;显示示计算(Float):</span>
+					<label style="margin-left: 8px;">
+						<input type="radio" name="filter-join" value="group-or" v-model="filter.join" @change="loadDataChange">
+						<span>Or</span>
+					</label>
+				</div><br/>
+				
+				<div>
+					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">Strategy(Group):</span>
+					<input type="checkbox" style="width: 32px;margin: 0px" v-model="showStrategyGroup" @change="loadDataChange"  disabled />
+					<input type="text" v-model="strategyGroupRange" placeholder="Range" @input="loadDataChange" :disabled="!showStrategyGroup" style="width: 50px;">
+					
+					<span style="display: inline-flex;">
+						<label style="display: flex;align-items: center;">
+							<span>&emsp;显示示计算(Float):</span>
 							<input type="checkbox" style="width: 32px;margin: 0px" v-model="showFloat" />
 						</label>
 					</span>
@@ -225,13 +236,13 @@
 					},
 					
 					filter: {
-						// date: window.moment().format('YYYY-MM-DD'),
-						date: '2023-10-17',
+						date: window.moment().format('YYYY-MM-DD'),
 						code: '',
 						marketCount: '', // 流值 50%
 						eMarketCountRate: '', // 市值比 10.33%
 						eBuyMoneyRate: '', // 量比 2%
 						type: 'market-count',
+						join: 'group-or',
 					},
 					
 					show: {},
@@ -425,34 +436,69 @@
 						entrust_data = f_list
 					}
 					
-					// 市值筛选
-					if(this.filter.marketCount && !this.filter.code) {
-						var f_list = entrust_data.filter(function(item) {
-							if(Number(item.marketCount) >= Number(_this.filter.marketCount)) {
-								return true
-							}
-						})
-						entrust_data = f_list
+					// 流通市值筛选
+					var filter_marketCount = () => {
+						if(this.filter.marketCount && !this.filter.code) {
+							var f_list = entrust_data.filter(function(item) {
+								if(Number(item.marketCount) >= Number(_this.filter.marketCount)) {
+									return true
+								}
+							})
+							
+							if(this.filter.join == 'group-or') return f_list
+							else entrust_data = f_list
+						}
 					}
-					
-					// 市值比筛选
-					if(this.filter.eMarketCountRate && !this.filter.code) {
-						var f_list = entrust_data.filter(function(item) {
-							if(Number(item.eMarketCountRate) >= Number(_this.filter.eMarketCountRate)) {
-								return true
-							}
-						})
-						entrust_data = f_list
-					}
+					var __filter_marketCount = filter_marketCount()
 					
 					// 量比筛选
-					if(this.filter.eBuyMoneyRate && !this.filter.code) {
-						var f_list = entrust_data.filter(function(item) {
-							if(Number(item.eBuyMoneyRate) >= Number(_this.filter.eBuyMoneyRate)) {
-								return true
+					var filter_eBuyMoneyRate = () => {
+						if(this.filter.eBuyMoneyRate && !this.filter.code) {
+							var f_list = entrust_data.filter(function(item) {
+								if(Number(item.eBuyMoneyRate) >= Number(_this.filter.eBuyMoneyRate)) {
+									return true
+								}
+							})
+							
+							if(this.filter.join == 'group-or') return f_list
+							else entrust_data = f_list
+						}
+					}
+					var __filter_eBuyMoneyRate = filter_eBuyMoneyRate()
+					
+					// 市值比筛选
+					var filter_eMarketCountRate = () => {
+						if(this.filter.eMarketCountRate && !this.filter.code) {
+							var f_list = entrust_data.filter(function(item) {
+								if(Number(item.eMarketCountRate) >= Number(_this.filter.eMarketCountRate)) {
+									return true
+								}
+							})
+							
+							if(this.filter.join == 'group-or') return f_list
+							else entrust_data = f_list
+						}
+					}
+					var __filter_eMarketCountRate = filter_eMarketCountRate()
+					
+					
+					// Group or...
+					if(this.filter.join == 'group-or') {
+						var filter_arror_or = new Array().concat(__filter_marketCount, __filter_eBuyMoneyRate, __filter_eMarketCountRate)
+						
+						var f_n_list = []
+						filter_arror_or.filter(item => {
+							return Object.prototype.toString.call(item) == '[object Object]'
+						}).forEach(item => {
+							var codes = f_n_list.map(v => v.code)
+							if(!codes.includes(item.code)) {
+								f_n_list.push(item)
 							}
 						})
-						entrust_data = f_list
+						
+						if(f_n_list.length > 0) {
+							entrust_data = f_n_list
+						}
 					}
 					
 					// 日期排序
