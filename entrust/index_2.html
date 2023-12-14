@@ -33,6 +33,23 @@
 		.close-console {position: absolute;top: -12px;right: 25px;cursor: pointer;user-select: none;}
 		
 		#importFile {position: absolute;left: 0;top: 0;bottom: 0;width: 100% !important;opacity: 0;}
+		
+		.compute-box {
+			display: inline-flex;
+			flex-direction: column;
+			align-items: center;
+		}
+		.compute-box__buy {
+			margin-top: 3px;
+			transform: scale(1.23);
+			transform-origin: right;
+			font-family: math;
+			font-weight: 500;
+		}
+		.item-name {
+			transform: scale(1.23);
+			transform-origin: left;
+		}
 	</style>
 	
 	<body>
@@ -158,12 +175,17 @@
 					<input type="checkbox" style="width: 32px;margin: 0px" v-model="showStrategyGroup" @change="loadDataChange"  disabled />
 					<input type="text" v-model="strategyGroupRange" placeholder="Range" @input="loadDataChange" :disabled="!showStrategyGroup" style="width: 50px;">
 					
-					<span style="display: inline-flex;">
+					<div style="display: inline-flex;">
 						<label style="display: flex;align-items: center;">
 							<span>&emsp;显示示计算(Float):</span>
 							<input type="checkbox" style="width: 32px;margin: 0px" v-model="showFloat" />
 						</label>
-					</span>
+					</div>
+					
+					<div style="display: inline-flex" v-if="showFloat">
+						<span>&emsp;买入金额：</span>
+						<input type="number" v-model="form.buyMoney" placeholder="请输入买入金额" maxlength="5" />&nbsp;¥
+					</div>
 				</div>
 				
 				<ol style="margin-top: 25px;width: fit-content;padding-left: 25px;transform: scale(0.91);transform-origin: top left;" id="entrust-panel" @mousedown="onOlMouse">
@@ -174,36 +196,52 @@
 						:id="`li-${index}`" 
 						@click="onLiClick(index)"
 					>
-						<span style="width: 170px;">名称：{{ item.name }}（{{ item.code }}）</span>
+						<span style="width: 170px;">名称：{{ item.name }}<span class="orange-color item-name">（{{ item.code }}）</span></span>
 						<span>日期：{{ item.date }}</span>
 						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
 						<span style="width: 125px;">承接/量比：{{ item.eBuyMoneyRate }}%</span>
 						<span>承接/市值比：{{ item.eMarketCountRate }}%</span>
 						<span style="width: 160px;">有效流通市值：<span class="orange-color">{{ item.marketCount  }}亿</span></span>
-						<span>行业：<span :title="item.concept" class="orange-color" style="width: 62px;overflow: hidden;text-overflow: ellipsis;">{{ item.concept || '/' }}</span></span>
+						<span style="display: inline-flex;">行业：<span :title="item.concept" class="orange-color" style="width: 62px;overflow: hidden;text-overflow: ellipsis;">{{ item.concept || '/' }}</span></span>
 						
 						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(item, $event)">删除</a>
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showCode(item, $event)">筛选代码</a>
 						
 						<div v-if="showFloat" class="float-size" style="margin-top: 10px;">
-							<span class="red-color" style="margin-right: 30px !important;">{{ item.buyPrice }}↑</span>
+							<span style="margin-right: 30px !important;">{{ item.buyPrice }}<span class="red-color">↑</span></span>
 							
-							<span v-for="(rate, index) of floatPrice" :key="`a_${ index }`">
-								<span class="orange-color">{{ rate }}%</span>
-								<span>-></span>
-								<span style="margin-right: 30px !important;">{{ openPriceDefineRate(Number(item.buyPrice), Number(rate)) }}</span>
-							</span>
+							<div class="compute-box" v-for="(rate, index) of floatPrice" :key="`a_${ index }`">
+								<span>
+									<span class="orange-color">{{ rate }}%</span>
+									<span>-></span>
+									<span style="margin-right: 30px !important;">{{ openPriceDefineRate(Number(item.buyPrice), Number(rate)) }}</span>
+								</span>
+								
+								<span class="compute-box__buy" style="color: rgba(255, 69, 0, 0.63)">
+									【
+										{{ computeBuyNumber(openPriceDefineRate(Number(item.buyPrice), Number(rate))) }}
+									】
+								</span>
+							</div>
 						</div>
 						
 						<div v-if="showFloat" class="float-size" style="margin-top: 10px;">
-							<span class="green-color" style="margin-right: 30px !important;">{{ item.buyPrice }}↓</span>
+							<span style="margin-right: 30px !important;">{{ item.buyPrice }}<span class="green-color">↓</span></span>
 							
-							<span v-for="(rate, index) of floatPrice" :key="`a_${ index }`">
-								<span class="orange-color">-{{ rate }}%</span>
-								<span>-></span>
-								<span style="margin-right: 30px !important;">{{ openPriceDefineRate(Number(item.buyPrice), Number(-rate)) }}</span>
-							</span>
+							<div class="compute-box" v-for="(rate, index) of floatPrice" :key="`a_${ index }`">
+								<span>
+									<span class="orange-color">-{{ rate }}%</span>
+									<span>-></span>
+									<span style="margin-right: 30px !important;">{{ openPriceDefineRate(Number(item.buyPrice), Number(-rate)) }}</span>
+								</span>
+								
+								<span class="compute-box__buy" style="color: rgba(0, 255, 96, 0.63);">
+									【
+										{{ computeBuyNumber(openPriceDefineRate(Number(item.buyPrice), Number(-rate))) }}
+									】
+								</span>
+							</div>
 						</div>
 					</li>
 				</ol>
@@ -225,7 +263,7 @@
 				return {
 					fetchFinish: true,
 					floatPrice: new Array(0.33, 2.33, 3.33, 4.66, 5.33, 6.7, 7.18, 7.67, 8.33).reverse(),
-					showFloat: false,
+					showFloat: true,
 					
 					showStrategyGroup: false, // 是否开启策略
 					strategyGroupRange: 5, // 指定策略集范围/前个数
@@ -233,6 +271,7 @@
 					form: {
 						date: window.moment().format('YYYY-MM-DD'), // 日期
 						code: '', // 股票代码
+						buyMoney: '5000', // 买入金额
 					},
 					
 					filter: {
@@ -266,6 +305,23 @@
 				
 			},
 			methods:{
+				// 计算买入数量
+				computeBuyNumber(price) {
+					var divisor = (this.form.buyMoney / price).toFixed(2) * 1
+					var remDiff = divisor - (divisor % 100)
+					
+					var beforeMoney = remDiff * price
+					var afterMoney = (remDiff + 100) * price
+					
+					var before_diff = Math.abs(this.form.buyMoney - beforeMoney)
+					var after_diff = Math.abs(this.form.buyMoney - afterMoney)
+					
+					if(before_diff < after_diff) {
+						return remDiff
+					}else {
+						return remDiff + 100
+					}
+				},
 				/**
 				 * 获取缓存数据
 				 */
