@@ -15,7 +15,8 @@ var $commonMinxin = {
 				STOCK_REAL_KLINE_DATA_URL: 'https://route.showapi.com/131-50',
 				STOCK_INFO_URL:'https://route.showapi.com/131-43', // 查询股票信息 https://www.showapi.com/apiGateway/view/131/43#tabs
 				STOCK_HISOTRY_URL:'https://route.showapi.com/131-47', // 查询股票历史日线行情 https://www.showapi.com/apiGateway/view/131/47#tabs
-				STOCK_TIME_URL: 'https://route.showapi.com/131-46' // 查询股票历史行情详情（五档数据）https://www.showapi.com/apiGateway/view/131/46#tabs
+				STOCK_TIME_URL: 'https://route.showapi.com/131-46', // 查询股票历史行情详情（五档数据）https://www.showapi.com/apiGateway/view/131/46#tabs
+				DP_MARKET_URL: 'https://route.showapi.com/131-56', // 查询大盘行情数据 https://www.showapi.com/apiGateway/view/131/56#tabs
 			},
 			
 			signdata:{ // 数据请求签名参数
@@ -281,6 +282,35 @@ var $commonMinxin = {
 			axios({
 				method: 'post',
 				url: this.globalUrl['STOCK_TIME_URL'],
+				data: params,
+			}).then(function(res) {
+				var data = res.data;
+				if(data.showapi_res_code == 0) {
+					var resbody = data.showapi_res_body;
+					if(resbody.ret_code == 0) {
+						resbody.list.length > 0 ? callback(resbody.list) : alert('无查询数据...');
+					}else {
+						alert(resbody.remark)
+					}
+				}
+			})
+		},
+		/**
+		 * 查询大盘行情
+		 * @param {Object} code 上深创大盘代码
+		 * @param {Object} month 月份
+		 */
+		fetch_dp_market:function(code, month, callback) {
+			var _this = this;
+			var params = JSON.parse(JSON.stringify(this.signdata));
+			Object.assign(params, {
+				code: code,
+				month: month,
+			})
+			
+			axios({
+				method: 'post',
+				url: this.globalUrl['DP_MARKET_URL'],
 				data: params,
 			}).then(function(res) {
 				var data = res.data;

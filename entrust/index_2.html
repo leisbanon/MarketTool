@@ -9,6 +9,9 @@
 	</head>
 	<style>
 		#entrust p, p span {font-size: 18px !important;}
+		#app {
+			margin: 50px 0px 0px 35px;
+		}
 		
 		.input-label {float: left;}
 		._textarea {outline: none;border-radius: 6px;padding: 7px;width: 760px;height: 85px;}
@@ -50,12 +53,17 @@
 			transform: scale(1.23);
 			transform-origin: left;
 		}
+		
+		.text-computed {width: 80px;height: 80px;line-height: 80px;text-align: center;position: absolute;left: 0;top: 0px;background-color: rgba(0, 0, 0, 0.4);font-family: math;transform: scale(0.5);transform-origin: left top;user-select: none;cursor: pointer;border-bottom-right-radius: 12px;box-shadow: 0px 0px 3px #000000;}
+		.text-computed:active {opacity: 0.8;}
 	</style>
 	
 	<body>
 		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
 		
 		<div id="app">
+			<div class="text-computed" id="text-computed" @click="test__computed">Computed</div>
+			
 			<div class="console" v-if="show.name">
 				<h3>Statised</h3>
 				<p class="close-console red-color" @click="show = {}">关闭</p>
@@ -68,7 +76,7 @@
 					<li>委托数量：{{ show.buyNumber }}万</li>
 				</ul>
 			</div>
-						
+			
 			<!-- 查询 -->
 			<div class="diff">
 				<h2 style="color: white;">查 询：</h2>
@@ -137,7 +145,7 @@
 						<input type="radio" name="filter-type" value="market-count" v-model="filter.type" @change="loadDataChange">
 						<span>市值比</span>
 					</label>
-					
+
 					<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
 					
 					<button type="button" style="margin-left: 18px;">
@@ -196,17 +204,18 @@
 						:id="`li-${index}`" 
 						@click="onLiClick(index)"
 					>
-						<span style="width: 170px;">名称：{{ item.name }}<span class="orange-color item-name">（{{ item.code }}）</span></span>
+						<span style="width: 130px;">{{ item.name }}<span class="orange-color item-name">（{{ item.code }}）</span></span>
 						<span>日期：{{ item.date }}</span>
-						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
-						<span style="width: 125px;">承接/量比：{{ item.eBuyMoneyRate }}%</span>
-						<span>承接/市值比：{{ item.eMarketCountRate }}%</span>
-						<span style="width: 160px;">有效流通市值：<span class="orange-color">{{ item.marketCount  }}亿</span></span>
+						<span style="width: 205px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
+						<span style="width: 150px;">成交额(单边)：<span class="orange-color">{{ priceOneSideFormat(item.volPrice) }}</span></span>
+						<span style="width: 90px;">量比：{{ item.eBuyMoneyRate }}%</span>
+						<span style="width: 100px;">市值比：{{ item.eMarketCountRate }}%</span>
+						<span style="width: 160px;">有效流通市值：{{ item.marketCount  }}亿</span>
 						<span style="display: inline-flex;">行业：<span :title="item.concept" class="orange-color" style="width: 62px;overflow: hidden;text-overflow: ellipsis;">{{ item.concept || '/' }}</span></span>
 						
-						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(item, $event)">删除</a>
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showCode(item, $event)">筛选代码</a>
+						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(item, $event)">删除</a>
 						
 						<div v-if="showFloat" class="float-size" style="margin-top: 10px;">
 							<span style="margin-right: 30px !important;">{{ item.buyPrice }}<span class="red-color">↑</span></span>
@@ -255,15 +264,16 @@
 	<script type="text/javascript" src="../static/js/axios.min.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../static/js/moment.js" charset="utf-8"></script>
 	<script type="text/javascript" src="../stockCommon.minxin.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./computed.js"></script>
 	<script type="text/javascript">
 		var app = new Vue({
 			el: '#app',
-			mixins:[$commonMinxin],
+			mixins:[$commonMinxin, $Computed],
 			data() {
 				return {
 					fetchFinish: true,
 					floatPrice: new Array(0.33, 2.33, 3.33, 4.66, 5.33, 6.7, 7.18, 7.67, 8.33).reverse(),
-					showFloat: true,
+					showFloat: false,
 					
 					showStrategyGroup: false, // 是否开启策略
 					strategyGroupRange: 5, // 指定策略集范围/前个数
@@ -279,7 +289,7 @@
 						code: '',
 						marketCount: '', // 流值 50%
 						eMarketCountRate: '', // 市值比 10.33%
-						eBuyMoneyRate: '', // 量比 2%
+						eBuyMoneyRate: '', // 量比 100%
 						type: 'market-count',
 						join: 'group-or',
 					},
@@ -291,7 +301,6 @@
 					
 					// File
 					stockList:[],
-					pageList:[],
 				}
 			},
 			mounted:function() {
