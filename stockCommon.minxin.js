@@ -52,16 +52,16 @@ var $commonMinxin = {
 		
 		// serviceWorker 使用Service Worker Allowed HTTP标头来允许作用域
 		// The path of the provided scope ('/') is not under the max scope allowed ('/MarketTool/'). Adjust the scope, move the Service Worker script, or use the Service-Worker-Allowed HTTP header to allow the scope.
-		// this.installSW();
+		this.installSW();
 	},
 	methods:{
 		/**
 		 * 页面注册 Service Worker
 		 */
-		installSW:function() {
+		async installSW() {
 			if("serviceWorker" in navigator) {
 				try{
-					var registration = navigator.serviceWorker.register('/MarketTool/sw.js', { scope: "/" })
+					var registration = await navigator.serviceWorker.register('/sw.js', { scope: "/" })
 					
 					if (registration.installing) {
 						console.log("正在安装 Service worker");

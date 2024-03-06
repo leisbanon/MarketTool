@@ -54,7 +54,7 @@
 			transform-origin: left;
 		}
 		
-		.text-computed {width: 80px;height: 80px;line-height: 80px;text-align: center;position: absolute;left: 0;top: 0px;background-color: rgba(0, 0, 0, 0.4);font-family: math;transform: scale(0.5);transform-origin: left top;user-select: none;cursor: pointer;border-bottom-right-radius: 12px;box-shadow: 0px 0px 3px #000000;}
+		.text-computed {width: 80px;height: 80px;line-height: 80px;text-align: center;position: fixed;left: 0;top: 0px;background-color: rgba(0, 0, 0, 0.4);font-family: math;transform: scale(0.43);transform-origin: left top;user-select: none;cursor: pointer;border-bottom-right-radius: 12px;box-shadow: 0px 0px 3px #000000;}
 		.text-computed:active {opacity: 0.8;}
 	</style>
 	
@@ -134,6 +134,11 @@
 					<label>
 						<input type="radio" name="filter-type" value="vol-price" v-model="filter.type" @change="loadDataChange">
 						<span>总金额</span>
+					</label>
+					
+					<label>
+						<input type="radio" name="filter-type" value="vol-sum" v-model="filter.type" @change="loadDataChange">
+						<span>成交额</span>
 					</label>
 					
 					<label>
@@ -570,6 +575,8 @@
 					var sort_de = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return new Date(v1.date).getTime() - new Date(v2.date).getTime() })
 					// 总金额排序
 					var sort_vp = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eMoney) - Number(v1.eMoney) })
+					// 成交额(单边)
+					var sort_vs = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.volPrice) - Number(v1.volPrice) })
 					// 量比排序
 					var sort_vr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
 					// 市值比排序
@@ -583,6 +590,9 @@
 								break;
 							case 'vol-price':
 								entrust_data = sort_vp
+								break;
+							case 'vol-sum':
+								entrust_data = sort_vs
 								break;
 							case 'vol-rate':
 								entrust_data = sort_vr
@@ -640,6 +650,7 @@
 						el.classList.remove('li-select')
 					})
 					console.log(this.filter.type)
+					// console.log(this.dataList)
 				},
 				/**
 				 * 数据删除
