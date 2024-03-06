@@ -61,7 +61,7 @@ var $commonMinxin = {
 		async installSW() {
 			if("serviceWorker" in navigator) {
 				try{
-					var registration = await navigator.serviceWorker.register('/sw.js', { scope: "/" })
+					var registration = await navigator.serviceWorker.register('/MarketTool/sw.js', { scope: "/" })
 					
 					if (registration.installing) {
 						console.log("正在安装 Service worker");
