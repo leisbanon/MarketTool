@@ -118,52 +118,14 @@
 			<!-- Save History Datas -->
 			<div class="diff details">
 				<h2 style="width: 433px;">1. Save History Datas【Filter】：</h2>
-				<span>筛选代码：</span>
-				<input type="text" v-model="filter.code" id="filter-code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
 				
-				<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选日期：</span>
-				<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
-				
-				<div style="display: inline-block;">
-					<span>&emsp;排序规则：</span>
-					<label>
-						<input type="radio" name="filter-type" value="default" v-model="filter.type" @change="loadDataChange">
-						<span>时间</span>
-					</label>
-					
-					<label>
-						<input type="radio" name="filter-type" value="vol-price" v-model="filter.type" @change="loadDataChange">
-						<span>总金额</span>
-					</label>
-					
-					<label>
-						<input type="radio" name="filter-type" value="vol-sum" v-model="filter.type" @change="loadDataChange">
-						<span>成交额</span>
-					</label>
-					
-					<label>
-						<input type="radio" name="filter-type" value="vol-rate" v-model="filter.type" @change="loadDataChange">
-						<span>量比</span>
-					</label>
-					
-					<label>
-						<input type="radio" name="filter-type" value="market-count" v-model="filter.type" @change="loadDataChange">
-						<span>市值比</span>
-					</label>
-
-					<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
-					
-					<button type="button" style="margin-left: 18px;">
-						<span>导入</span>
-						<input @change="imports" id="importFile" name="importFile" type="file" accept=".txt" />
-					</button>
-					
-					<button type="button" style="margin-left: 18px;" @click="exports">导出</button>
-				</div><br/><br/>
-				
+				<!-- Filter -->
 				<div>
-					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">筛选流通市值：</span>
-					<input type="text" v-model="filter.marketCount" placeholder="流通市值" maxlength="4" @input="loadDataChange" style="width: 105px;" />
+					<span>筛选代码：</span>
+					<input type="text" v-model="filter.code" id="filter-code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
+					
+					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选日期：</span>
+					<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
 					
 					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选量比：</span>
 					<input type="text" v-model="filter.eBuyMoneyRate" placeholder="量比" maxlength="5" @input="loadDataChange" />
@@ -171,16 +133,68 @@
 					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选市值比：</span>
 					<input type="text" v-model="filter.eMarketCountRate" placeholder="市值比" maxlength="4" @input="loadDataChange" />
 					
-					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;组合关系：</span>
-					<label>
-						<input type="radio" name="filter-join" value="group-and" v-model="filter.join" @change="loadDataChange">
-						<span>And</span>
-					</label>
+					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选流通市值：</span>
+					<input type="text" v-model="filter.marketCount" placeholder="流通市值" maxlength="4" @input="loadDataChange" style="width: 105px;" />
+				</div><br/>
+				
+				<!-- Sort -->
+				<div style="display: flex;align-items: center;">
+					<div>
+						<span>排序规则：</span>
+						<label>
+							<input type="radio" name="filter-type" value="default" v-model="filter.type" @change="loadDataChange">
+							<span>时间</span>
+						</label>
+						
+						<label>
+							<input type="radio" name="filter-type" value="vol-price" v-model="filter.type" @change="loadDataChange">
+							<span>总金额</span>
+						</label>
+						
+						<label>
+							<input type="radio" name="filter-type" value="vol-sum" v-model="filter.type" @change="loadDataChange">
+							<span>成交额</span>
+						</label>
+						
+						<label>
+							<input type="radio" name="filter-type" value="vol-rate" v-model="filter.type" @change="loadDataChange">
+							<span>量比</span>
+						</label>
+						
+						<label>
+							<input type="radio" name="filter-type" value="market-count" v-model="filter.type" @change="loadDataChange">
+							<span>市值比</span>
+						</label>
+						
+						<label>
+							<input type="radio" name="filter-type" value="concept-group" v-model="filter.type" @change="loadDataChange">
+							<span>行业</span>
+						</label>
+					</div>
 					
-					<label style="margin-left: 8px;">
-						<input type="radio" name="filter-join" value="group-or" v-model="filter.join" @change="loadDataChange">
-						<span>Or</span>
-					</label>
+					<div class="__middle-line" style="border-bottom: 1px #CCCCCC solid;width: 100px;margin: 0 18px;transform: scaleY(0.33);opacity: 0"></div>
+					
+					<div>
+						<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">组合关系：</span>
+						<label>
+							<input type="radio" name="filter-join" value="group-and" v-model="filter.join" @change="loadDataChange">
+							<span>And</span>
+						</label>
+						
+						<label style="margin-left: 8px;">
+							<input type="radio" name="filter-join" value="group-or" v-model="filter.join" @change="loadDataChange">
+							<span>Or</span>
+						</label>
+
+						<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
+						
+						<button type="button" style="margin-left: 18px;">
+							<span>导入</span>
+							<input @change="imports" id="importFile" name="importFile" type="file" accept=".txt" />
+						</button>
+						
+						<button type="button" style="margin-left: 18px;" @click="exports">导出</button>
+					</div>
 				</div><br/>
 				
 				<div>
@@ -216,11 +230,14 @@
 						<span style="width: 90px;">量比：{{ item.eBuyMoneyRate }}%</span>
 						<span style="width: 100px;">市值比：{{ item.eMarketCountRate }}%</span>
 						<span style="width: 160px;">有效流通市值：{{ item.marketCount  }}亿</span>
-						<span style="display: inline-flex;">行业：<span :title="item.concept" class="orange-color" style="width: 62px;overflow: hidden;text-overflow: ellipsis;">{{ item.concept || '/' }}</span></span>
+						<span style="display: inline-flex;position: relative;">行业：
+							<span :title="item.concept" :class="[ item.__last_type ? 'red-color' : 'orange-color']" style="width: 62px;overflow: hidden;text-overflow: ellipsis;position: relative;">{{ item.concept || '/' }}</span>
+							<sub class="red-color" v-if="item.__concept_size" style="position: absolute;right: -4px;font-size: 14px;">（{{ item.__concept_size }}）</sub>
+						</span>
 						
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showCode(item, $event)">筛选代码</a>
-						<a class="insert-number" style="color: rgb(255, 69, 0);" @click="remoteHistory(item, $event)">删除</a>
+						<a class="insert-number" style="color: rgba(204,204,204, 0.5);" @click="remoteHistory(item, $event)">删除</a>
 						
 						<div v-if="showFloat" class="float-size" style="margin-top: 10px;">
 							<span style="margin-right: 30px !important;">{{ item.buyPrice }}<span class="red-color">↑</span></span>
@@ -295,7 +312,7 @@
 						marketCount: '', // 流值 50%
 						eMarketCountRate: '', // 市值比 10.33%
 						eBuyMoneyRate: '', // 量比 100%
-						type: 'market-count',
+						type: 'concept-group',
 						join: 'group-or',
 					},
 					
@@ -552,7 +569,7 @@
 					var __filter_eMarketCountRate = filter_eMarketCountRate()
 					
 					
-					// Group or...
+					// 组合关系 -> OR
 					if(this.filter.join == 'group-or') {
 						var filter_arror_or = new Array().concat(__filter_marketCount, __filter_eBuyMoneyRate, __filter_eMarketCountRate)
 						
@@ -581,8 +598,48 @@
 					var sort_vr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
 					// 市值比排序
 					var sort_mc = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
+					// 行业排序
+					var sort_cg = []
 					
-					// 关闭组合策略
+					const concept__groups = () => {
+						let n_entrust_data = JSON.parse(JSON.stringify(entrust_data))
+						let g_concept = []
+						
+						let match = (concept) => {
+							let call = { exist: false }
+							for(let index in g_concept) {
+								let list = g_concept[index * 1]
+								let names = list.map(item => item.concept)
+								if(names.indexOf(concept) != -1) {
+									call.index = index * 1
+									call.exist = true
+									break
+								}
+							}
+							return call
+						}
+						
+						for(let item of n_entrust_data) {
+							let { exist, index } = match(item.concept)
+							if(exist === true) {
+								g_concept[index].push(item)
+							}else {
+								g_concept.push(new Array(item))
+							}
+						}
+						
+						let array = g_concept.sort((v1, v2) => v2.length - v1.length)
+						array.forEach(item => {
+							if(item.length >= 2) {
+								item[item.length - 1].__last_type = true
+								item[item.length - 1].__concept_size = item.length
+							}
+							sort_cg = sort_cg.concat(item)
+						})
+						// console.log('sort_cg => ', sort_cg)
+					}
+					
+					// 关闭组合策略（Strategy）
 					if(!this.showStrategyGroup || this.filter.code) {
 						switch (this.filter.type){
 							case 'default':
@@ -600,6 +657,10 @@
 							case 'market-count':
 								entrust_data = sort_mc
 								break;
+							case 'concept-group':
+								concept__groups()
+								entrust_data = sort_cg
+								break
 						}
 					}
 					
