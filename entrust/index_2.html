@@ -169,12 +169,11 @@
 						<label>
 							<input type="radio" name="filter-type" value="concept-group" v-model="filter.type" @change="loadDataChange">
 							<span>行业</span>
+							<span class="red-color" v-if="filter.concept" style="cursor: no-drop;" @click="onFilterConcepts($event)">({{ filter.concept }})</span>
 						</label>
 					</div>
 					
-					<div class="__middle-line" style="border-bottom: 1px #CCCCCC solid;width: 100px;margin: 0 18px;transform: scaleY(0.33);opacity: 0"></div>
-					
-					<div>
+					<div style="flex: 1;padding-right: calc(10% - 2px);text-align: right;">
 						<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">组合关系：</span>
 						<label>
 							<input type="radio" name="filter-join" value="group-and" v-model="filter.join" @change="loadDataChange">
@@ -232,7 +231,7 @@
 						<span style="width: 160px;">有效流通市值：{{ item.marketCount  }}亿</span>
 						<span style="display: inline-flex;position: relative;">行业：
 							<span :title="item.concept" :class="[ item.__last_type ? 'red-color' : 'orange-color']" style="width: 62px;overflow: hidden;text-overflow: ellipsis;position: relative;">{{ item.concept || '/' }}</span>
-							<sub class="red-color" v-if="item.__concept_size" style="position: absolute;right: -4px;font-size: 14px;">（{{ item.__concept_size }}）</sub>
+							<sub @click="onFilterConcepts($event, item.concept)" class="red-color" title="筛选行业" v-if="item.__concept_size" style="position: absolute;right: -4px;font-size: 14px;cursor: pointer;">（{{ item.__concept_size }}）</sub>
 						</span>
 						
 						<a class="insert-number" style="color: rgb(100, 149, 237);" @click="showHistory(item, $event)">回显</a>
@@ -312,6 +311,7 @@
 						marketCount: '', // 流值 50%
 						eMarketCountRate: '', // 市值比 10.33%
 						eBuyMoneyRate: '', // 量比 100%
+						concept: '', // 行业
 						type: 'concept-group',
 						join: 'group-or',
 					},
@@ -495,6 +495,14 @@
 					console.log(newEntrustData, 'newEntrustData')
 				},
 				/**
+				 * 筛选行业
+				 */
+				onFilterConcepts(e, concept) {
+					e.stopPropagation()
+					this.filter.concept = concept || ''
+					this.loadDataChange()
+				},
+				/**
 				 * 加载数据变更
 				 * @param {Object} symbol 指定筛选类型返回的数据
 				 */
@@ -568,10 +576,22 @@
 					}
 					var __filter_eMarketCountRate = filter_eMarketCountRate()
 					
+					// 筛选行业
+					var filter_concept = () => {
+						if(this.filter.concept && !this.filter.code) {
+							var f_list = entrust_data.filter(function(item) {
+								return item.concept == _this.filter.concept
+							})
+							
+							if(this.filter.join == 'group-or') return f_list
+							else entrust_data = f_list
+						}
+					}
+					var __filter_concept = filter_concept()
 					
 					// 组合关系 -> OR
 					if(this.filter.join == 'group-or') {
-						var filter_arror_or = new Array().concat(__filter_marketCount, __filter_eBuyMoneyRate, __filter_eMarketCountRate)
+						var filter_arror_or = new Array().concat(__filter_marketCount, __filter_eBuyMoneyRate, __filter_eMarketCountRate, __filter_concept)
 						
 						var f_n_list = []
 						filter_arror_or.filter(item => {
