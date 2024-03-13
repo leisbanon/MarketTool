@@ -162,6 +162,11 @@
 						</label>
 						
 						<label>
+							<input type="radio" name="filter-type" value="deal-rate" v-model="filter.type" @change="loadDataChange">
+							<span>手笔率</span>
+						</label>
+						
+						<label>
 							<input type="radio" name="filter-type" value="market-count" v-model="filter.type" @change="loadDataChange">
 							<span>市值比</span>
 						</label>
@@ -180,7 +185,7 @@
 							<span>And</span>
 						</label>
 						
-						<label style="margin-left: 8px;">
+						<label style="margin-left: 3px;">
 							<input type="radio" name="filter-join" value="group-or" v-model="filter.join" @change="loadDataChange">
 							<span>Or</span>
 						</label>
@@ -224,10 +229,11 @@
 					>
 						<span style="width: 130px;">{{ item.name }}<span class="orange-color item-name">（{{ item.code }}）</span></span>
 						<span>日期：{{ item.date }}</span>
-						<span style="width: 205px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
+						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
 						<span style="width: 150px;">成交额(单边)：<span class="orange-color">{{ priceOneSideFormat(item.volPrice) }}</span></span>
-						<span style="width: 90px;">量比：{{ item.eBuyMoneyRate }}%</span>
-						<span style="width: 100px;">市值比：{{ item.eMarketCountRate }}%</span>
+						<span style="width: 92px;">量比：{{ item.eBuyMoneyRate }}%</span>
+						<span style="width: 92px;">手笔率：{{ item.eHandDealRate ? `${ item.eHandDealRate }%` : '/' }}</span>
+						<span style="width: 92px;">市值比：{{ item.eMarketCountRate }}%</span>
 						<span style="width: 160px;">有效流通市值：{{ item.marketCount  }}亿</span>
 						<span style="display: inline-flex;position: relative;">行业：
 							<span :title="item.concept" :class="[ item.__last_type ? 'red-color' : 'orange-color']" style="width: 62px;overflow: hidden;text-overflow: ellipsis;position: relative;">{{ item.concept || '/' }}</span>
@@ -385,6 +391,32 @@
 					value = value == Infinity || isNaN(value) ? 0 : value
 					return value.toFixed(2)
 				},
+				/**
+				 * 手笔率计算
+				 */
+				e_handDealRate(item) {
+					let priceOne = (item.volPrice * 10000 * 10000) / 2 // 成交金额(单边)
+					let dealCount = (item.dealCount || 0) * 1 // 笔数
+					let buyPrice = item.buyPrice * 1 // 价格
+					
+					// 成交总股数
+					let deal_t__gs = priceOne / buyPrice
+					// console.log('成交总股数 => ', deal_t__gs)
+					// 成交手数
+					let deal_t__ss = deal_t__gs / 100
+					// console.log('成交手数 => ', deal_t__ss)
+					// 平均每笔成交股数
+					let count_gs__average = dealCount ? deal_t__gs / dealCount : ''
+					// console.log('平均每笔成交股数 => ', count_gs__average)
+					// 平均每笔成交的金额
+					let count_money__average = dealCount ? (priceOne / dealCount).toFixed() : ''
+					// console.log('平均每笔成交的金额 => ', count_money__average)
+					// 手笔率
+					let hand_deal__rate = dealCount ? (dealCount / deal_t__ss * 100).toFixed(2) : ''
+					return hand_deal__rate
+					// console.log('手笔率 => ', hand_deal__rate)
+					// console.log('-------------------------------------------------------')
+				},
 				// 加载代码队列
 				loadingCode(){
 					var _this = this;
@@ -461,15 +493,18 @@
 					
 					for(var item of list) {
 						for(var key of Object.keys(item)) {
+							if(this.norequireKeys(key)) break
+							
 							if(!item[key]) return this.showToast('信息补充不完整')
 						}
 					}
 					
 					list.forEach(function(item) {
-						item['date'] = _this.form.date,
-						item['eMoney'] = _this.e_money(item)
-						item['eBuyMoneyRate'] = _this.e_buyMoneyRate(item)
-						item['eMarketCountRate'] = _this.e_marketCountRate(item)
+						item['date'] = item.date || _this.form.date, // 日期
+						item['eMoney'] = _this.e_money(item) // 承接/总金额
+						item['eBuyMoneyRate'] = _this.e_buyMoneyRate(item) // 量比
+						item['eMarketCountRate'] = _this.e_marketCountRate(item) // 市值比
+						item['eHandDealRate'] = _this.e_handDealRate(item) // 手笔率
 					})
 					
 					// 重复判断
@@ -616,6 +651,8 @@
 					var sort_vs = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.volPrice) - Number(v1.volPrice) })
 					// 量比排序
 					var sort_vr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
+					// 手笔率排序
+					var sort_dr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eHandDealRate) - Number(v1.eHandDealRate) })
 					// 市值比排序
 					var sort_mc = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
 					// 行业排序
@@ -674,6 +711,9 @@
 							case 'vol-rate':
 								entrust_data = sort_vr
 								break;
+							case 'deal-rate':
+								entrust_data = sort_dr
+								break
 							case 'market-count':
 								entrust_data = sort_mc
 								break;
@@ -874,6 +914,11 @@
 						this.loadingCode()
 					}
 				},
+				// 可空选项键值
+				norequireKeys(key) {
+					var keys = ['dealCount', 'date']
+					return keys.indexOf(key) != -1
+				},
 				// 读取文件
 				handleFiles:function(input) {
 					var _this = this;
@@ -897,7 +942,9 @@
 							{label: '总金额',key: 'volPrice',symbol: ''},
 							{label: '买价一',key: 'buyPrice',symbol: ''},
 							{label: '买量一',key: 'buyNumber',symbol: ''},
-							{label: '有效流通市值',key: 'marketCount',symbol: ''}
+							{label: '有效流通市值',key: 'marketCount',symbol: ''},
+							{label: '笔数',key: 'dealCount',symbol: '', required: false },
+							{label: '入选日期',key: 'date',symbol: '', required: false },
 						]
 						
 						for(var stock of stocks) {
@@ -910,7 +957,7 @@
 						}
 						
 						var noSymbol = stocks.filter(function(item) {
-							return !item.symbol
+							return !item.symbol && item.required != false
 						})
 						var symMsg = noSymbol.map(function(item) { return item.label })
 						if(noSymbol.length > 0) return _this.showToast(`No Symbol Key：${ symMsg.join() }`, 2000)
@@ -919,7 +966,7 @@
 						for(var index = 2;index <= x_size;index++) {
 							var stockObject = new Object()
 							for(var item of stocks) {
-								stockObject[item.key] = _sheets[item.symbol + index].v
+								stockObject[item.key] = _sheets[item.symbol + index]?.v || ''
 							}
 							stockList.push(stockObject)
 						}
@@ -951,8 +998,6 @@
 								item.marketCount = item.marketCount.replace(/万/g, '') / 10000
 							}
 						})
-						// console.log(stockList, 'stockList')
-						// return
 						
 						// 加载到代码队列
 						var codeList = stockList.map(function(item) {
@@ -964,8 +1009,13 @@
 								buyPrice: item.buyPrice, // 买一报价
 								buyNumber: item.buyNumber, // 买入数量
 								marketCount: item.marketCount, // 有效流通市值
+								dealCount: item.dealCount, // 笔数
+								date: item.date ? window.moment(item.date).format('YYYY-MM-DD') : '', // 入选时间
 							}
 						})
+						
+						let date = codeList[0]?.date
+						if(date) _this.form.date = date
 						
 						var codes = codeList.map(function(item) { return item.code })
 						_this.form.code = codes.join('-')
@@ -976,6 +1026,8 @@
 				noLoadingCompute(item) {
 					var isClass = false
 					for(var key of Object.keys(item)) {
+						if(this.norequireKeys(key)) break
+						
 						if(!item[key]) {
 							isClass = true
 							break
