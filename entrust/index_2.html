@@ -393,6 +393,8 @@
 				},
 				/**
 				 * 手笔率计算
+				 * . 笔数越是接近手数【手笔率越大】，表明交易频繁，对一致方向的分歧较大，可能出货的嫌疑越大，承接力度不足
+				 * . 笔数越是小于手数【手笔率越小】，表明方向一致，对一致方向的分歧较小，可能出货的嫌疑越小，承接力度较好
 				 */
 				e_handDealRate(item) {
 					let priceOne = (item.volPrice * 10000 * 10000) / 2 // 成交金额(单边)
@@ -500,7 +502,7 @@
 					}
 					
 					list.forEach(function(item) {
-						item['date'] = item.date || _this.form.date, // 日期
+						item['date'] = _this.form.date // 日期
 						item['eMoney'] = _this.e_money(item) // 承接/总金额
 						item['eBuyMoneyRate'] = _this.e_buyMoneyRate(item) // 量比
 						item['eMarketCountRate'] = _this.e_marketCountRate(item) // 市值比
@@ -916,7 +918,7 @@
 				},
 				// 可空选项键值
 				norequireKeys(key) {
-					var keys = ['dealCount', 'date']
+					var keys = ['dealCount']
 					return keys.indexOf(key) != -1
 				},
 				// 读取文件
@@ -944,7 +946,6 @@
 							{label: '买量一',key: 'buyNumber',symbol: ''},
 							{label: '有效流通市值',key: 'marketCount',symbol: ''},
 							{label: '笔数',key: 'dealCount',symbol: '', required: false },
-							{label: '入选日期',key: 'date',symbol: '', required: false },
 						]
 						
 						for(var stock of stocks) {
@@ -1010,12 +1011,8 @@
 								buyNumber: item.buyNumber, // 买入数量
 								marketCount: item.marketCount, // 有效流通市值
 								dealCount: item.dealCount, // 笔数
-								date: item.date ? window.moment(item.date).format('YYYY-MM-DD') : '', // 入选时间
 							}
 						})
-						
-						let date = codeList[0]?.date
-						if(date) _this.form.date = date
 						
 						var codes = codeList.map(function(item) { return item.code })
 						_this.form.code = codes.join('-')
