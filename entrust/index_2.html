@@ -74,6 +74,7 @@
 					<li>成交金额：{{ show.volPrice }}亿 </li>
 					<li>委托价：{{ show.buyPrice }}元</li>
 					<li>委托数量：{{ show.buyNumber }}万</li>
+					<li>笔数：{{ show.dealCount || '/' }}</li>
 				</ul>
 			</div>
 			
@@ -401,6 +402,8 @@
 					let dealCount = (item.dealCount || 0) * 1 // 笔数
 					let buyPrice = item.buyPrice * 1 // 价格
 					
+					// console.log(`名称：${ item.name }(${ item.code })`)
+					
 					// 成交总股数
 					let deal_t__gs = priceOne / buyPrice
 					// console.log('成交总股数 => ', deal_t__gs)
@@ -415,9 +418,9 @@
 					// console.log('平均每笔成交的金额 => ', count_money__average)
 					// 手笔率
 					let hand_deal__rate = dealCount ? (dealCount / deal_t__ss * 100).toFixed(2) : ''
-					return hand_deal__rate
 					// console.log('手笔率 => ', hand_deal__rate)
 					// console.log('-------------------------------------------------------')
+					return hand_deal__rate
 				},
 				// 加载代码队列
 				loadingCode(){
@@ -654,7 +657,7 @@
 					// 量比排序
 					var sort_vr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
 					// 手笔率排序
-					var sort_dr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eHandDealRate) - Number(v1.eHandDealRate) })
+					var sort_dr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v1.eHandDealRate) - Number(v2.eHandDealRate) })
 					// 市值比排序
 					var sort_mc = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
 					// 行业排序
