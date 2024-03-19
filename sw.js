@@ -8,10 +8,12 @@ self.addEventListener('install', (event) => {
 				'/entrust/index.html',
 				'/entrust/index_2.html',
 				'/static/css/main.css',
-				'/static/js/vue@v2.6.js',
 				'/static/js/accounting.min.js',
 				'/static/js/axios.min.js',
+				'/static/js/FileSaver.min.js',
 				'/static/js/moment.js',
+				'/static/js/vue@v2.6.js',
+				'/static/js/xlsx.full.min.js',
 				'/stockCommon.minxin.js'
 			])
 		})

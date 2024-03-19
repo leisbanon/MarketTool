@@ -16,6 +16,8 @@
 	</style>
 
 	<body>
+		<div id="mask-loading" style="position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: white;overflow: hidden;z-index: 1000;"></div>
+		
 		<div id="app">
 			<div class="diff">
 				<div class="average-box">
@@ -76,9 +78,13 @@
 		</div>
 	</body>
 	
+	<script type="text/javascript" src="./static/js/axios.min.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./static/js/moment.js" charset="utf-8"></script>
+	<script type="text/javascript" src="./stockCommon.minxin.js" charset="utf-8"></script>
 	<script type="text/javascript">
 		var app = new Vue({
 			el: '#app',
+			mixins:[$commonMinxin],
 			data() {
 				return {
 				}
