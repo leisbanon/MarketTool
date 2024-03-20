@@ -123,7 +123,7 @@
 				<!-- Filter -->
 				<div>
 					<span>筛选代码：</span>
-					<input type="text" v-model="filter.code" id="filter-code" placeholder="请输入股票代码" maxlength="6" @input="loadDataChange" />
+					<input type="text" v-model="filter.code" id="filter-code" placeholder="请输入股票代码" maxlength="6" @keyup.enter="loadDataChange" />
 					
 					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;筛选日期：</span>
 					<input type="date" v-model="filter.date" placeholder="请选择日期" @change="loadDataChange" />
@@ -163,13 +163,13 @@
 						</label>
 						
 						<label>
-							<input type="radio" name="filter-type" value="deal-rate" v-model="filter.type" @change="loadDataChange">
-							<span>手笔率</span>
+							<input type="radio" name="filter-type" value="market-count" v-model="filter.type" @change="loadDataChange">
+							<span>市值比</span>
 						</label>
 						
 						<label>
-							<input type="radio" name="filter-type" value="market-count" v-model="filter.type" @change="loadDataChange">
-							<span>市值比</span>
+							<input type="radio" name="filter-type" value="dealcount-singe" v-model="filter.type" @change="loadDataChange">
+							<span>笔额</span>
 						</label>
 						
 						<label>
@@ -180,18 +180,9 @@
 					</div>
 					
 					<div style="flex: 1;padding-right: calc(10% - 2px);text-align: right;">
-						<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">组合关系：</span>
-						<label>
-							<input type="radio" name="filter-join" value="group-and" v-model="filter.join" @change="loadDataChange">
-							<span>And</span>
-						</label>
+						<button type="button" style="margin-left: 18px;" @click="copys">复制</button>
 						
-						<label style="margin-left: 3px;">
-							<input type="radio" name="filter-join" value="group-or" v-model="filter.join" @change="loadDataChange">
-							<span>Or</span>
-						</label>
-
-						<button type="button" style="margin-left: 18px;" @click="copys">去复制</button>
+						<button type="button" style="margin-left: 18px;" @click="copys__select">复制(选中)</button>
 						
 						<button type="button" style="margin-left: 18px;">
 							<span>导入</span>
@@ -203,7 +194,18 @@
 				</div><br/>
 				
 				<div>
-					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">Strategy(Group):</span>
+					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">组合关系：</span>
+					<label>
+						<input type="radio" name="filter-join" value="group-and" v-model="filter.join" @change="loadDataChange">
+						<span>And</span>
+					</label>
+					
+					<label style="margin-left: 3px;">
+						<input type="radio" name="filter-join" value="group-or" v-model="filter.join" @change="loadDataChange">
+						<span>Or</span>
+					</label>
+					
+					<span :style="{ 'text-decoration': filter.code ? 'line-through' : 'none' }">&emsp;Strategy(Group):</span>
 					<input type="checkbox" style="width: 32px;margin: 0px" v-model="showStrategyGroup" @change="loadDataChange"  disabled />
 					<input type="text" v-model="strategyGroupRange" placeholder="Range" @input="loadDataChange" :disabled="!showStrategyGroup" style="width: 50px;">
 					
@@ -233,8 +235,8 @@
 						<span style="width: 200px;">承接/总金额：{{ formatMoney(item.eMoney) }}</span>
 						<span style="width: 150px;">成交额(单边)：<span class="orange-color">{{ priceOneSideFormat(item.volPrice) }}</span></span>
 						<span style="width: 92px;">量比：{{ item.eBuyMoneyRate }}%</span>
-						<span style="width: 92px;">手笔率：{{ item.eHandDealRate ? `${ item.eHandDealRate }%` : '/' }}</span>
 						<span style="width: 92px;">市值比：{{ item.eMarketCountRate }}%</span>
+						<span style="width: 150px;">笔额(均值)：{{ e_handDealCount(item).count_money__average ? formatMoney(e_handDealCount(item).count_money__average) : '/' }}</span>
 						<span style="width: 160px;">有效流通市值：{{ item.marketCount  }}亿</span>
 						<span style="display: inline-flex;position: relative;">行业：
 							<span :title="item.concept" :class="[ item.__last_type ? 'red-color' : 'orange-color']" style="width: 62px;overflow: hidden;text-overflow: ellipsis;position: relative;">{{ item.concept || '/' }}</span>
@@ -393,11 +395,11 @@
 					return value.toFixed(2)
 				},
 				/**
-				 * 手笔率计算
+				 * 手笔率计算（Invalid）
 				 * . 笔数越是接近手数【手笔率越大】，表明交易频繁，对一致方向的分歧较大，可能出货的嫌疑越大，承接力度不足
 				 * . 笔数越是小于手数【手笔率越小】，表明方向一致，对一致方向的分歧较小，可能出货的嫌疑越小，承接力度较好
 				 */
-				e_handDealRate(item) {
+				e_handDealCount(item) {
 					let priceOne = (item.volPrice * 10000 * 10000) / 2 // 成交金额(单边)
 					let dealCount = (item.dealCount || 0) * 1 // 笔数
 					let buyPrice = item.buyPrice * 1 // 价格
@@ -420,7 +422,9 @@
 					let hand_deal__rate = dealCount ? (dealCount / deal_t__ss * 100).toFixed(2) : ''
 					// console.log('手笔率 => ', hand_deal__rate)
 					// console.log('-------------------------------------------------------')
-					return hand_deal__rate
+					return new Object({
+						count_money__average
+					})
 				},
 				// 加载代码队列
 				loadingCode(){
@@ -509,7 +513,6 @@
 						item['eMoney'] = _this.e_money(item) // 承接/总金额
 						item['eBuyMoneyRate'] = _this.e_buyMoneyRate(item) // 量比
 						item['eMarketCountRate'] = _this.e_marketCountRate(item) // 市值比
-						item['eHandDealRate'] = _this.e_handDealRate(item) // 手笔率
 					})
 					
 					// 重复判断
@@ -656,10 +659,14 @@
 					var sort_vs = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.volPrice) - Number(v1.volPrice) })
 					// 量比排序
 					var sort_vr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eBuyMoneyRate) - Number(v1.eBuyMoneyRate) })
-					// 手笔率排序
-					var sort_dr = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v1.eHandDealRate) - Number(v2.eHandDealRate) })
 					// 市值比排序
 					var sort_mc = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) { return Number(v2.eMarketCountRate) - Number(v1.eMarketCountRate) })
+					// 单笔金额排序
+					var sort_ds = JSON.parse(JSON.stringify(entrust_data)).sort(function(v1, v2) {
+						var __v2 = _this.e_handDealCount(v2).count_money__average || 0
+						var __v1 = _this.e_handDealCount(v1).count_money__average || 0
+						return Number(__v2) - Number(__v1)
+					})
 					// 行业排序
 					var sort_cg = []
 					
@@ -716,11 +723,11 @@
 							case 'vol-rate':
 								entrust_data = sort_vr
 								break;
-							case 'deal-rate':
-								entrust_data = sort_dr
-								break
 							case 'market-count':
 								entrust_data = sort_mc
+								break;
+							case 'dealcount-singe':
+								entrust_data = sort_ds
 								break;
 							case 'concept-group':
 								concept__groups()
@@ -838,6 +845,19 @@
 						return item.code
 					}).reverse()
 					window.prompt('Copy', list.join(','))
+				},
+				/**
+				 * 复制（选中）
+				 */
+				copys__select() {
+					var liSelect = document.getElementById("entrust-panel").querySelectorAll('.li-select')
+					var codes = []
+					liSelect.forEach(li => {
+						var text = li.querySelector('span').innerText
+						var code = text.replace(/\D/g, '')
+						codes.push(code)
+					})
+					window.prompt('Copy', codes.reverse().join(','))
 				},
 				/**
 				 * 导入
