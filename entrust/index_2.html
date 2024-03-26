@@ -504,7 +504,12 @@
 						for(var key of Object.keys(item)) {
 							if(this.norequireKeys(key)) break
 							
-							if(!item[key]) return this.showToast('信息补充不完整')
+							if(!item[key]) {
+								this.showToast('信息补充不完整')
+								console.log(`item => `, item)
+								console.log(`key => `, key)
+								return
+							}
 						}
 					}
 					
